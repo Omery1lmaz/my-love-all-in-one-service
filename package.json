@@ -1,0 +1,48 @@
+{
+  "name": "auth-service",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "clean": "del ./build/*",
+    "start": "ts-node-dev --respawn --transpile-only ./src/index.ts",
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "npm run clean && tsc",
+    "pub": "git add . && git commit -m \"Updates\" && npm version patch && npm run build && npm publish"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@heaven-nsoft/common": "^1.2.17",
+    "@heaven-nsoft/my-love-common": "^1.2.54",
+    "aws-sdk": "^2.1692.0",
+    "axios": "^1.8.1",
+    "bcrypt": "^5.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^4.21.2",
+    "google-auth-library": "^9.15.1",
+    "mongoose": "^8.10.1",
+    "mongoose-update-if-current": "^1.4.0",
+    "multer": "^1.4.5-lts.2",
+    "multer-s3": "^2.10.0",
+    "nats": "^2.29.2",
+    "nodemailer": "^6.10.0",
+    "openai": "^5.8.2",
+    "sharp": "^0.34.2",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "typescript": "^5.7.3"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/multer-s3": "^3.0.3",
+    "@types/node": "^22.13.4",
+    "@types/nodemailer": "^6.4.17",
+    "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}
