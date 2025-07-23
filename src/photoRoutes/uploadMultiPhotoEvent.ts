@@ -1,5 +1,5 @@
 import express from "express";
-import upload from "../utils/multer-s3/upload";
+import upload from "../utils/upload";
 import uploadMultiPhotoEventController from "../photoControllers/uploadMultiPhotoEvent";
 
 const router = express.Router();

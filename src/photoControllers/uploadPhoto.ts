@@ -11,6 +11,7 @@ export const uploadPhotoController = async (
   next: NextFunction
 ) => {
   try {
+    console.log("uploadPhotoController");
     try {
       const authHeader = req.headers.authorization;
       if (!authHeader) return next(new NotAuthorizedError());

@@ -7,8 +7,8 @@ const router = express.Router();
 
 router.get(
   "/event/:id",
-  getEventByIdExpressValidator,
-  validateRequest,
+  // getEventByIdExpressValidator,
+  // validateRequest,
   getUserEventsByIdController
 );
 

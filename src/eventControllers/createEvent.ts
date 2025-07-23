@@ -8,7 +8,6 @@ import { natsWrapper } from "../nats-wrapper";
 const createEventController = async (req: Request, res: Response) => {
   console.log("createEventController");
   const authHeader = req.headers.authorization;
-
   if (!authHeader) {
     console.log("authHeader not found");
     res.status(401).json({ message: "Lütfen giriş yapın" });

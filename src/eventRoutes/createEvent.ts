@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.post(
   "/create-event",
-  // upload.array("photo", 10),
+  upload.array("photo", 10),
   // createEventExpressValidator,
   // validateRequest,
   createEventController

@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { BadRequestError, NotAuthorizedError } from "@heaven-nsoft/common";
+import { BadRequestError, NotAuthorizedError, NotFoundError } from "@heaven-nsoft/common";
 import mongoose from "mongoose";
 import { Photo } from "../Models/photo";
 import { natsWrapper } from "../nats-wrapper";
 import sharp from "sharp";
 import { uploadToS3 } from "../utils/upload";
+import { Event } from "../Models/event";
 
 const uploadMultiPhotoEventController = async (
   req: Request,
@@ -17,6 +18,7 @@ const uploadMultiPhotoEventController = async (
     console.log("uploadMultiPhotoEventController");
     const authHeader = req.headers.authorization;
     if (!authHeader) {
+      console.log("NotAuthorizedError")
       next(new NotAuthorizedError());
       return;
     }
@@ -28,16 +30,19 @@ const uploadMultiPhotoEventController = async (
         id: string;
       };
     } catch (err) {
+      console.log("NotAuthorizedError")
       next(new NotAuthorizedError());
       return;
     }
 
     if (!decodedToken?.id) {
+      console.log("NotAuthorizedError")
       next(new NotAuthorizedError());
       return;
     }
-
+    console.log("req.files", req.files);
     if (!req.files || !Array.isArray(req.files)) {
+      console.log("BadRequestError")
       next(new BadRequestError("File upload failed"));
       return;
     }
@@ -96,6 +101,14 @@ const uploadMultiPhotoEventController = async (
         coverPhotoId = savedPhoto._id;
       }
     }
+    const existsEvent = await Event.findById(eventId);
+    if (!existsEvent) {
+      console.log("Event not found");
+      next(new NotFoundError());
+      return;
+    }
+    existsEvent.photos = uploadedPhotos.map((photo: any) => photo._id);
+    await existsEvent.save();
     console.log("cover photo id", coverPhotoId);
     res.status(201).json({
       message: "Photos uploaded successfully",

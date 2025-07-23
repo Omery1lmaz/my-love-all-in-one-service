@@ -100,10 +100,6 @@ app.use(
     secure: process.env.NODE_ENV !== "test",
   })
 );
-app.all("", async (req, res, next) => {
-  console.log("test", req.url);
-  next();
-});
 // Spotify
 
 app.use(getSharedSpotifyAlbumRouter);
@@ -194,9 +190,7 @@ app.use(generateImageVariationRouter);
 app.use(generateImageWithGeminiRouter);
 app.use(generateImageWithStableDiffusionRouter);
 
-app.all("*", async (req, res, next) => {
-  next(new NotFoundError());
-});
+
 
 // Album Service Start
 
@@ -252,6 +246,11 @@ app.use('/timeline', createTimelineRouter);
 app.use('/timeline', getTimelineByUserRouter);
 app.use('/timeline', getTimelineByIdRouter);
 
+
+
+app.all("*", async (req, res, next) => {
+  next(new NotFoundError());
+});
 // Timeline Service End
 
 // Page entegrated with api 

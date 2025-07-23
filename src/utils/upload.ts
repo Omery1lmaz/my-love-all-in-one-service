@@ -24,8 +24,8 @@ export const uploadToS3 = async (fileBuffer: Buffer, fileName: string, mimeType:
   return result.Location;
 };
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-});
 
-export default upload;
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+export default upload; 
