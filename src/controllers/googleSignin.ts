@@ -16,15 +16,36 @@ export const googleSigninController = async (
   res: Response,
   next: NextFunction
 ) => {
+  console.log("=== Google Signin Controller Started ===");
+  console.log("Request Body:", { 
+    idToken: req.body.idToken ? "Present" : "Missing", 
+    serverAuthCode: req.body.serverAuthCode ? "Present" : "Missing",
+    user: req.body.user ? "Present" : "Missing"
+  });
+  
   try {
     const { idToken, serverAuthCode, user } = req.body;
+    console.log("Extracted data:", { 
+      hasIdToken: !!idToken, 
+      hasServerAuthCode: !!serverAuthCode, 
+      userEmail: user?.email 
+    });
+    
+    console.log("Verifying ID token...");
     const payload = await verifyIdToken(idToken);
+    console.log("ID token verified successfully, payload sub:", payload?.sub);
 
+    console.log("Checking for existing user with googleId:", payload?.sub);
     let existingUser = await User.findOne({ googleId: payload!.sub });
 
     if (!existingUser) {
+      console.log("No existing user found with googleId, checking email...");
       const emailExist = await User.findOne({ email: user.email });
+      
       if (!emailExist) {
+        console.log("No user found with email, creating new user...");
+        console.log("Making Google OAuth token exchange request...");
+        
         axios
           .post("https://oauth2.googleapis.com/token", {
             code: serverAuthCode,
@@ -34,8 +55,14 @@ export const googleSigninController = async (
             grant_type: "authorization_code",
           })
           .then(async (response) => {
+            console.log("Google OAuth token exchange successful");
             const { refresh_token } = response.data;
+            
+            console.log("Generating unique invitation code...");
             const userPartnerCode = await generateUniqueInvitationCode();
+            console.log("Generated invitation code:", userPartnerCode);
+            
+            console.log("Creating new user...");
             existingUser = new User({
               googleId: payload!.sub,
               provider: "google",
@@ -47,7 +74,12 @@ export const googleSigninController = async (
               isAdmin: false,
               isActive: true,
             });
+            
+            console.log("Saving new user to database...");
             await existingUser.save();
+            console.log("User saved successfully, ID:", existingUser._id);
+            
+            console.log("Publishing UserCreated event...");
             await new UserCreatedPublisher(natsWrapper.client).publish({
               id: existingUser._id,
               email: existingUser.email,
@@ -59,11 +91,20 @@ export const googleSigninController = async (
               profilePic: existingUser.profilePic || "",
               version: existingUser.version,
             });
+            console.log("UserCreated event published successfully");
 
+            console.log("Creating JWT token...");
             const token = createToken(
               existingUser._id as unknown as string,
               existingUser.partnerId as unknown as string
             );
+            console.log("JWT token created successfully");
+            
+            console.log("=== Google Signin SUCCESS - New User Created ===");
+            console.log("User ID:", existingUser._id);
+            console.log("User Email:", existingUser.email);
+            console.log("User Name:", existingUser.name);
+            
             res.status(200).json({
               user: existingUser,
               googleToken: idToken,
@@ -74,23 +115,37 @@ export const googleSigninController = async (
             });
           })
           .catch((err) => {
-            console.error(
-              "Google Token Exchange Error:",
-              err.response?.data || err.message
-            );
+            console.error("=== Google OAuth Token Exchange ERROR ===");
+            console.error("Error details:", err.response?.data || err.message);
+            console.error("Error status:", err.response?.status);
+            console.error("Error headers:", err.response?.headers);
+            console.error("Full error object:", err);
+            
             // next(new BadRequestError(`Geçersiz kimlik ${err}`));
             res.status(500).json("Geçersiz kimlik");
           });
       } else {
+        console.error("=== Google Signin ERROR - Email Already Exists ===");
+        console.error("Email already exists in database:", user.email);
+        console.error("This email is not associated with Google account");
+        
         res.status(500).json("Geçersiz kimlik doğrulama yöntemi");
 
         // next(new BadRequestError("Geçersiz kimlik doğrulama yöntemi"));
       }
     } else {
+      console.log("Existing user found, creating JWT token...");
       const token = createToken(
         existingUser._id as unknown as string,
         existingUser.partnerId as unknown as string
       );
+      console.log("JWT token created successfully for existing user");
+      
+      console.log("=== Google Signin SUCCESS - Existing User ===");
+      console.log("User ID:", existingUser._id);
+      console.log("User Email:", existingUser.email);
+      console.log("User Name:", existingUser.name);
+      
       res.status(200).json({
         user: existingUser,
         googleToken: idToken,
@@ -101,7 +156,12 @@ export const googleSigninController = async (
       });
     }
   } catch (error) {
-    console.log("Google Signin Error:", error);
+    console.error("=== Google Signin CONTROLLER ERROR ===");
+    console.error("Error type:", error?.constructor?.name);
+    console.error("Error message:", (error as Error)?.message);
+    console.error("Error stack:", (error as Error)?.stack);
+    console.error("Full error object:", error);
+    
     res.status(500).json("Geçersiz veya süresi dolmuş token");
 
     // next(new BadRequestError("Geçersiz veya süresi dolmuş token"));

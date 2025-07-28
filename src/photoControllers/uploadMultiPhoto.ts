@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { BadRequestError, NotAuthorizedError } from "@heaven-nsoft/common";
+import { BadRequestError, NotAuthorizedError, NotFoundError } from "@heaven-nsoft/common";
 import mongoose from "mongoose";
 import { natsWrapper } from "../nats-wrapper";
 import sharp from "sharp";
 import { Photo } from "../Models/photo";
 import { uploadToS3 } from "../utils/upload";
+import { Album } from "../Models/album";
 export const uploadMultiPhotoController = async (
   req: Request,
   res: Response,
@@ -115,6 +116,14 @@ export const uploadMultiPhotoController = async (
         coverPhotoId = savedPhoto._id;
       }
     }
+
+    const album = await Album.findById(albumId);
+    if (!album) {
+      next(new NotFoundError());
+      return;
+    }
+    album.photos = uploadedPhotos.map((photo) => photo._id) as any;
+    await album.save();
 
     res.status(201).json({
       message: "Photos uploaded successfully",

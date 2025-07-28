@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { BadRequestError, NotAuthorizedError } from "@heaven-nsoft/common";
+import { BadRequestError, NotAuthorizedError, NotFoundError } from "@heaven-nsoft/common";
 import mongoose from "mongoose";
 import { Photo } from "../Models/photo";
 import { natsWrapper } from "../nats-wrapper";
 import sharp from "sharp";
 import { uploadToS3 } from "../utils/upload";
+import { Timeline } from "../Models/timeline";
 
 const uploadMultiPhotoTimelineController = async (
   req: Request,
@@ -26,16 +27,20 @@ const uploadMultiPhotoTimelineController = async (
         id: string;
       };
     } catch (err) {
+      console.log("uploadMultiPhotoTimelineController err", err);
       next(new NotAuthorizedError());
       return;
     }
 
     if (!decodedToken?.id) {
+      console.log("uploadMultiPhotoTimelineController decodedToken?.id");
       next(new NotAuthorizedError());
       return;
     }
 
     if (!req.files || !Array.isArray(req.files)) {
+      console.log("uploadMultiPhotoTimelineController req.files", req.files);
+
       next(new BadRequestError("File upload failed"));
       return;
     }
@@ -49,6 +54,7 @@ const uploadMultiPhotoTimelineController = async (
       coverPhotoFileName,
       timelineId,
     } = req.body;
+    console.log("timelineId", timelineId);
 
     const uploadedPhotos = [];
     let coverPhotoId = null;
@@ -94,6 +100,16 @@ const uploadMultiPhotoTimelineController = async (
         coverPhotoId = savedPhoto._id;
       }
     }
+
+    const timeline = await Timeline.findById(timelineId);
+    if (!timeline) {
+      console.log("timeline not found");
+      next(new NotFoundError());
+      return;
+    }
+    timeline.photos = uploadedPhotos.map((photo) => photo._id) as any;
+    await timeline.save();
+
     console.log("cover photo id", coverPhotoId);
     res.status(201).json({
       message: "Photos uploaded successfully",

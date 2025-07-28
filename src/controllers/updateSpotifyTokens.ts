@@ -10,12 +10,15 @@ export const updateSpotifyTokensController = async (
   const authHeader = req.headers.authorization;
   const { spotifyAccessToken, spotifyRefreshToken, spotifyAccessTokenExpires } =
     req.body;
+  console.log("updateSpotifyTokensController req.body", req.body);
   if (!authHeader) {
+    console.log("updateSpotifyTokensController authHeader");
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
   const token = authHeader.split(" ")[1];
   if (!token) {
+    console.log("updateSpotifyTokensController token");
     res.status(400).json({ message: "Token bulunamadı" });
     return;
   }
@@ -27,6 +30,7 @@ export const updateSpotifyTokensController = async (
       new mongoose.Types.ObjectId(decodedToken.id)
     );
     if (!user) {
+      console.log("updateSpotifyTokensController user");
       res.status(404).json({ message: "Kullanıcı bulunamadı" });
       return;
     }
@@ -52,6 +56,7 @@ export const updateSpotifyTokensController = async (
       },
     });
   } catch (error) {
+    console.log("updateSpotifyTokensController error", error);
     res.status(400).json({ message: "Kimlik doğrulama başarısız" });
   }
 };

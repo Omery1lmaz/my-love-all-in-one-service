@@ -1,12 +1,12 @@
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { BadRequestError, NotAuthorizedError } from "@heaven-nsoft/common";
+import { BadRequestError, NotAuthorizedError, NotFoundError } from "@heaven-nsoft/common";
 import mongoose from "mongoose";
 import { Photo } from "../Models/photo";
 import { natsWrapper } from "../nats-wrapper";
 import sharp from "sharp";
 import { uploadToS3 } from "../utils/upload";
-
+import { DailyJournal } from "../Models/dailyJournal";
 const uploadMultiPhotoDailyJourneyController = async (
   req: Request,
   res: Response,
@@ -117,6 +117,13 @@ const uploadMultiPhotoDailyJourneyController = async (
         coverPhotoId = savedPhoto._id;
       }
     }
+    const dailyJourney = await DailyJournal.findById(dailyJourneyId);
+    if (!dailyJourney) {
+      next(new NotFoundError());
+      return;
+    }
+    dailyJourney.photos = uploadedPhotos.map((photo) => photo._id) as any;
+    await dailyJourney.save();
     console.log("cover photo id", coverPhotoId);
     res.status(201).json({
       message: "Photos uploaded successfully",

@@ -241,6 +241,11 @@ app.use('/photo', uploadMultiPhotoDailyJourneyRouter);
 
 // Timeline Service Start
 
+app.all("*", async (req, res, next) => {
+  console.log("req.originalUrl", req.originalUrl);
+  // next(new NotFoundError());
+  next();
+});
 
 app.use('/timeline', createTimelineRouter);
 app.use('/timeline', getTimelineByUserRouter);

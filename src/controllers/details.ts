@@ -28,6 +28,7 @@ export const detailsController = async (req: Request, res: Response) => {
       res.status(404).json({ message: "Kullanıcı bulunamadı" });
       return;
     }
+    console.log("user details", user.spotifyRefreshToken);
     res.status(200).json({
       _id: user._id,
       email: user.email,
@@ -36,7 +37,9 @@ export const detailsController = async (req: Request, res: Response) => {
       partnerName: user.partnerName || "",
       partnerNickname: user.partnerNickname,
       profilePic: user.profilePhoto || "",
-      partnerProfilePic: user.partnerId ? (((user.partnerId) as any).profilePhoto) : ""
+      partnerProfilePic: user.partnerId ? (((user.partnerId) as any).profilePhoto) : "",
+      partnerId: user.partnerId ? (((user.partnerId) as any)._id) : "",
+      spotifyConnected: user.spotifyRefreshToken ? true : false,
     });
   } catch (error) {
     res.status(400).json({ message: "Kimlik doğrulama başarısız" });
