@@ -23,21 +23,29 @@ export const getUserPhotosController = async (
       console.log("getUserPhotosController token");
       decodedToken = jwt.verify(token, process.env.SECRET_KEY!) as {
         id: string;
+        partnerId: string;
       };
     } catch (err) {
       console.log("getUserPhotosController err");
       next(new NotAuthorizedError());
       return;
     }
-    console.log("getUserPhotosController decodedToken", decodedToken.id);
+    console.log("getUserPhotosController decodedToken", decodedToken.id, decodedToken.partnerId);
     if (!decodedToken?.id) {
       console.log("getUserPhotosController decodedToken?.id");
       next(new NotAuthorizedError());
       return;
     }
 
-    const photos = await Photo.find({ user: decodedToken.id });
-    console.log("getUserPhotosController photos", photos);
+    const photos = await Photo.find({
+      $or: [
+        { user: decodedToken.id },
+        ...(decodedToken.partnerId ? [{
+          user: decodedToken.partnerId,
+          isPrivate: false
+        }] : [])
+      ]
+    });
     res.status(200).json(photos);
   } catch (error) {
     console.error("Error fetching user photos:", error);

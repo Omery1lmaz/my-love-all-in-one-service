@@ -96,6 +96,7 @@ interface UserAttrs {
   mood?: "happy" | "sad" | "neutral" | "excited";
   favoriteSongs?: mongoose.Schema.Types.ObjectId[]; // this is a string of an song
   favoriteMovie?: Movie;
+  sharedProfilePic?: mongoose.Schema.Types.ObjectId;
   subscriptionType?: "free" | "premium";
   lastLogin?: Date;
   activityLog?: string[];
@@ -240,6 +241,7 @@ interface UserDoc extends mongoose.Document {
   googleId?: string;
   partnerId?: mongoose.Schema.Types.ObjectId | null;
   relationshipStartDate?: Date | null;
+  sharedProfilePic?: mongoose.Schema.Types.ObjectId;
   status?: "single" | "in_relationship" | "married";
   mood?: "happy" | "sad" | "neutral" | "excited";
   favoriteSongs?: mongoose.Schema.Types.ObjectId[];
@@ -361,7 +363,7 @@ interface UserModel extends mongoose.Model<UserDoc> {
 const userSchema = new mongoose.Schema<UserDoc>(
   {
     googleId: { type: String },
-    isActive: { type: Boolean, default: true, required: true },
+    isActive: { type: Boolean, default: false, required: true },
     provider: {
       type: String,
       required: true,
@@ -369,6 +371,7 @@ const userSchema = new mongoose.Schema<UserDoc>(
       default: "email",
     },
     resetPasswordOtp: { type: String },
+    sharedProfilePic: { type: mongoose.Schema.Types.ObjectId, ref: "UserPhoto", default: null },
     resetPasswordToken: { type: String },
     sharedSpotifyAlbum: [
       {

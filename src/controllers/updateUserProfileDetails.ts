@@ -32,15 +32,12 @@ export const updateUserProfileDetailsController = async (
       res.status(404).json({ message: "Kullanıcı bulunamadı" });
       return;
     }
-    if (!req.file) {
-      console.log("File upload failed req.file");
-      res.status(400).json({ message: "File upload failed" });
-      return;
+    if (req.file) {
+      user.profilePhoto = (req.file as any).location;
     }
     user.surname = surName;
     user.birthDate = birthDate;
     user.gender = gender;
-    user.profilePhoto = (req.file as any).location;
     await user.save();
     res.status(200).json({
       message: "Profil bilgileri güncellendi",

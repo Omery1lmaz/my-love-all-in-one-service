@@ -32,17 +32,16 @@ export const updateUserRelationshipDateController = async (
       res.status(404).json({ message: "Kullanıcı bulunamadı" });
       return;
     }
+    const relationshipDate = new Date(relationshipStartDate);
     const partner = await User.findById(user.partnerId);
-    if (!partner) {
+    if (partner) {
+      partner.relationshipStartDate = relationshipDate;
+      await partner.save();
       res.status(404).json({ message: "Partner bulunamadı" });
       return;
     }
-
-    const fixedDate = new Date('2025-03-05T00:00:00.000Z');
-    user.relationshipStartDate = fixedDate;
-    partner.relationshipStartDate = fixedDate;
+    user.relationshipStartDate = relationshipDate;
     await user.save();
-    await partner.save();
     res.status(200).json({
       message: "İlişki başlangıç tarihi güncellendi",
       status: "success",

@@ -15,11 +15,11 @@ export const verifyRegisterController = async (req: Request, res: Response) => {
       token,
       process.env.SECRET_KEY as string
     ) as DecodedToken;
-    console.log(decodedToken, "decoded token");
 
     const user = await User.findById(decodedToken.id);
-    console.log("user test", user);
+    console.log("user", user?.otp);
     if (!user) {
+      console.log("user yok");
       res.status(400).json({
         isVerify: true,
         message: "Kullanıcı yok",
@@ -28,6 +28,7 @@ export const verifyRegisterController = async (req: Request, res: Response) => {
     }
 
     if (user.isActive) {
+      console.log("user aktif");
       res.status(201).json({
         isVerify: true,
         message: "Kullanıcı Emaili onaylandı",
@@ -36,6 +37,7 @@ export const verifyRegisterController = async (req: Request, res: Response) => {
     }
 
     if (user.otpExpires && new Date(user.otpExpires) < new Date()) {
+      console.log("otp süresi dolmuş");
       res.status(400).json({
         isVerify: true,
         message: "Otp süresi dolmuş",
@@ -44,6 +46,7 @@ export const verifyRegisterController = async (req: Request, res: Response) => {
     }
 
     if (parseInt(user.otp || "") !== parseInt(otp)) {
+      console.log("otp yanlış");
       res.status(400).json({
         message: "Girdiğiniz OTP uyuşmuyor",
       });
@@ -55,12 +58,7 @@ export const verifyRegisterController = async (req: Request, res: Response) => {
       { email: user.email },
       { isActive: true, otp: null, otpExpires: null }
     );
-    await new UserActivatedPublisher(natsWrapper.client).publish({
-      id: user._id,
-      email: user.email,
-      isActive: true,
-      version: user.version - 1,
-    });
+    console.log("user updated", user);
     const newToken = createToken(
       user._id as unknown as string,
       user.partnerId as unknown as string

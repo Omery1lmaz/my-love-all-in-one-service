@@ -3,8 +3,6 @@ import { User } from "../Models/user";
 import { createToken } from "../helpers/createToken";
 import { generateOTP } from "../helpers/generateOTP";
 import transporter from "../utils/mailTransporter";
-import { UserCreatedPublisher } from "../events/publishers/user-created-publisher";
-import { natsWrapper } from "../nats-wrapper";
 import generateUniqueInvitationCode from "../helpers/generateUniqueInvitationCode";
 import { BadRequestError } from "@heaven-nsoft/my-love-common";
 export const signupController = async (
@@ -12,8 +10,9 @@ export const signupController = async (
   res: Response,
   next: NextFunction
 ) => {
+  const { name, email, password } = req.body;
   try {
-    const { name, email, password } = req.body;
+    console.log(name, email, password, req.body, "name email password")
     const existingUser = await User.findOne({ email, isActive: false });
     if (existingUser && existingUser.isActive) {
       res.status(400).json({ message: "User already exists" });
@@ -22,10 +21,6 @@ export const signupController = async (
     const otpToken = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
     const userPartnerCode = await generateUniqueInvitationCode();
-    if (!existingUser) {
-      next(new BadRequestError("Kullanıcı bulunamadı"));
-      return;
-    }
     if (existingUser && !existingUser?.isActive) {
       (existingUser.password = password),
         (existingUser.otp = otpToken),
@@ -67,27 +62,17 @@ export const signupController = async (
     });
 
     const token = createToken(
-      existingUser._id as unknown as string,
-      existingUser.partnerId as unknown as string
+      newUser._id as unknown as string,
+      newUser.partnerId as unknown as string
     );
-    await new UserCreatedPublisher(natsWrapper.client).publish({
-      id: newUser._id,
-      email: newUser.email,
-      provider: newUser.provider,
-      googleId: newUser.googleId,
-      name: newUser.name,
-      isActive: newUser.isActive,
-      isDeleted: newUser.isDeleted,
-      profilePic: newUser.profilePic || "",
-      version: newUser.version,
-    });
     res.status(201).json({
       message: "Emailinizi onaylayınız",
       token,
     });
   } catch (error) {
     console.error("Kayıt sırasında hata oluştu:", error);
-    res.status(500).json({ message: "Sunucu hatası, lütfen tekrar deneyin" });
+    next(new BadRequestError("Kayıt sırasında hata oluştu"));
+    await User.findOneAndDelete({ email: email })
   }
 };
 

@@ -34,7 +34,6 @@ const getUserJournalsController = async (req: Request, res: Response) => {
       .limit(Number(limit))
       .populate("photos", "url")
       .exec();
-    console.log("journals test", journals)
     const total = await DailyJournal.countDocuments({ user: decodedToken.id });
 
     res.status(200).json({

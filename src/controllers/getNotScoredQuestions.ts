@@ -38,7 +38,6 @@ export const getNotScoredQuestionsController = async (
     const questions = user.questions?.filter((question) => {
       return (question.userScore == 0) && ((question?.partnerAnswer?.length || 0) > 0);
     });
-    console.log(questions, "user.questions")
     res.status(200).json({
       message: "Sorular güncellendi",
       status: "success",

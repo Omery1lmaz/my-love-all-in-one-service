@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { User } from "../Models/user";
 import { BadRequestError } from "@heaven-nsoft/common";
 import { createToken } from "../helpers/createToken";
@@ -10,7 +10,8 @@ import { UserPartnerUpdatedPublisher } from "../events/publishers/user-partner-u
 
 export const verifyRegisterPartnerCodeController = async (
   req: Request,
-  res: Response
+  res: Response,
+  next: NextFunction
 ) => {
   const { token, otp } = req.params;
   console.log("token otp", token, otp);
@@ -25,33 +26,24 @@ export const verifyRegisterPartnerCodeController = async (
     });
     if (!partner) {
       console.log("partner yok");
-      res.status(400).json({
-        message: "Partner kodu yanlış",
-      });
+      next(new BadRequestError("Partner kodu yanlış"));
       return;
     }
     if (partner.partnerId) {
-      res.status(400).json({
-        message: "Partner kodu zaten kullanıldı",
-      });
+      next(new BadRequestError("Partner kodu zaten kullanıldı"));
       return;
     }
 
     const user = await User.findById(decodedToken.id);
     if (!user) {
       console.log("user yok");
-      res.status(400).json({
-        isVerify: true,
-        message: "Kullanıcı yok",
-      });
+      next(new BadRequestError("Kullanıcı yok"));
       return;
     }
 
     if (partner.partnerInvitationCode !== parseInt(otp)) {
       console.log("otp yanlış");
-      res.status(400).json({
-        message: "Girdiğiniz OTP uyuşmuyor",
-      });
+      next(new BadRequestError("Girdiğiniz OTP uyuşmuyor"));
       return;
     }
     // Kullanıcı aktif hale getiriliyor
@@ -86,10 +78,7 @@ export const verifyRegisterPartnerCodeController = async (
     });
   } catch (err) {
     console.error(err);
-    res.status(400).json({
-      isVerify: true,
-      message: "Token geçersiz veya kullanıcı yok",
-    });
+    next(new BadRequestError("Token geçersiz veya kullanıcı yok"));
   }
 };
 

@@ -46,13 +46,42 @@ export const uploadPhotoController = async (
         isPrivate = false,
       } = req.body;
 
-      const parsedTags = tags ? JSON.parse(tags) : [];
-      const parsedLocation = location ? JSON.parse(location) : null;
+      // Safe JSON parsing with proper error handling
+      const parsedTags = tags && tags !== "" ? (() => {
+        try {
+          return JSON.parse(tags);
+        } catch {
+          return [];
+        }
+      })() : [];
+      
+      const parsedLocation = location && location !== "" ? (() => {
+        try {
+          return JSON.parse(location);
+        } catch {
+          return null;
+        }
+      })() : null;
+      
       const parsedDate = photoDate && !isNaN(new Date(photoDate).getTime())
         ? new Date(photoDate)
         : new Date();
-      const parsedIsPrivate = typeof isPrivate === "string" ? JSON.parse(isPrivate) : isPrivate;
-      const parsedMusicDetails = musicDetails ? JSON.parse(musicDetails) : null;
+      
+      const parsedIsPrivate = typeof isPrivate === "string" ? (() => {
+        try {
+          return JSON.parse(isPrivate);
+        } catch {
+          return false;
+        }
+      })() : isPrivate;
+      
+      const parsedMusicDetails = musicDetails && musicDetails !== "" ? (() => {
+        try {
+          return JSON.parse(musicDetails);
+        } catch {
+          return null;
+        }
+      })() : null;
 
       const file = req.file;
       console.log(photoDate, "photoDate");

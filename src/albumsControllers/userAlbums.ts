@@ -29,6 +29,7 @@ export const userAlbums = async (
     try {
       decodedToken = jwt.verify(token, process.env.SECRET_KEY!) as {
         id: string;
+        partnerId: string;
       };
     } catch (err) {
       console.log("err", err);
@@ -42,10 +43,17 @@ export const userAlbums = async (
       return;
     }
 
-    const albums = await Album.find({ user: decodedToken.id }).populate(
+    const albums = await Album.find({
+      $or: [
+        { user: decodedToken.id },
+        ...(decodedToken.partnerId ? [{
+          user: decodedToken.partnerId,
+          isPrivate: false
+        }] : [])
+      ]
+    }).populate(
       "photos coverPhoto"
     );
-    console.log("albums", albums);
     res.status(201).json({
       message: "Album created successfully",
       data: albums,

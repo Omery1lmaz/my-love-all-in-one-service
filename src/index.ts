@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { natsWrapper } from "./nats-wrapper";
 import { app } from "./app";
 import dotenv from "dotenv";
+import { ChatSocketService } from "./services/chatSocketService";
 
 dotenv.config();
 import { UserPhotoCreatedEvent } from "./events/listeners/user-photo-created-listener";
@@ -13,6 +14,14 @@ const start = async () => {
     if (!process.env.MONGO_URI) {
       throw new Error("MONGO_URI must be provided");
     }
+    if (!process.env.EMAIL_USER) {
+      throw new Error("EMAIL_USER must be provided");
+    }
+
+    if (!process.env.EMAIL_PASS) {
+      throw new Error("EMAIL_PASS must be provided");
+    }
+
     if (!process.env.NATS_CLIENT_ID) {
       throw new Error("NATS_CLIENT_ID must be defined");
     }
@@ -63,18 +72,21 @@ const start = async () => {
       console.error("Error connecting to MongoDB: ", error);
       throw error;
     }
-
-    app.use((req, res, next) => {
+    app.all("*", (req, res, next) => {
       console.log("Auth service");
       next();
     });
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 4201;
 
-    const listen = app.listen(PORT, () => {
-      console.log("Auth service listening on port 3000!");
+    const server = app.listen(PORT, () => {
+      console.log(`Photo service listening on port ${PORT}!`);
     });
 
-    listen.on("error", (err) => {
+    // Initialize Socket.IO chat service
+    const chatSocketService = new ChatSocketService(server);
+    console.log("Chat Socket.IO service initialized!");
+
+    server.on("error", (err) => {
       console.error("Server error: ", err);
     });
   } catch (error) {

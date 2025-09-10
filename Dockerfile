@@ -2,17 +2,15 @@ FROM node:alpine
 
 WORKDIR /app
 
-# Copy package files first for better caching
+# Önce sadece package dosyalarını kopyala
 COPY package*.json ./
 
-# Install dependencies
+# Bağımlılıkları yükle
 RUN npm ci --only=production
 
-# Copy source code
+# Kaynak kodları ayrı olarak kopyala
 COPY . .
 
-# Expose port 8080 for Cloud Run
 EXPOSE 8080
 
-# Start the application
 CMD ["npm", "start"]

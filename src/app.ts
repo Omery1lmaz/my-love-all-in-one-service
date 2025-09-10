@@ -78,6 +78,7 @@ import { createEventRouter } from "./eventRoutes/createEvent";
 import { getUserEventsRouter } from "./eventRoutes/getUserEvents";
 import { getUserEventByIdRouter } from "./eventRoutes/getEventById";
 import { getUpcomingEventsRouter } from "./eventRoutes/getUpcomingEvents";
+import { removeAllEventsRouter } from "./eventRoutes/removeAllEvents";
 import { uploadPhotoRouter } from "./photoRoutes/uploadPhoto";
 import { uploadMultiPhotoEventRouter } from "./photoRoutes/uploadMultiPhotoEvent";
 import { uploadMultiPhotoRouter } from "./photoRoutes/uploadMultiPhoto";
@@ -90,6 +91,9 @@ import { uploadMultiPhotoDailyJourneyRouter } from "./photoRoutes/uploadMultiPho
 import { createTimelineRouter } from "./timelineRoutes/createTimeline";
 import { getTimelineByUserRouter } from "./timelineRoutes/getTimelineByUser";
 import { getTimelineByIdRouter } from "./timelineRoutes/getTimelineById";
+import { uploadUserSharedProfilePhotoRouter } from "./photoRoutes/uploadUserSharedProfilePhoto";
+import { chatRouter } from "./chatRoutes";
+import { aiChatRouter } from "./aiChatRoutes";
 
 const app = express();
 app.set("trust proxy", true);
@@ -100,6 +104,12 @@ app.use(
     secure: process.env.NODE_ENV !== "test",
   })
 );
+
+// Log all requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
 // Spotify
 
 app.use(getSharedSpotifyAlbumRouter);
@@ -218,6 +228,7 @@ app.use('/event', createEventRouter);
 app.use('/event', getUserEventsRouter);
 app.use('/event', getUserEventByIdRouter);
 app.use('/event', getUpcomingEventsRouter);
+app.use('/event', removeAllEventsRouter);
 
 
 // Event Service End
@@ -235,9 +246,17 @@ app.use('/photo', getPhotoByIdRouter);
 app.use('/photo', updateUserPhotoMomentRouter);
 app.use('/photo', uploadUserProfilePhotoRouter);
 app.use('/photo', uploadMultiPhotoDailyJourneyRouter);
-
+app.use('/photo', uploadUserSharedProfilePhotoRouter);
 
 // Photo Service End
+
+// Chat Service Start
+app.use('/chat', chatRouter);
+// Chat Service End
+
+// AI Chat Service Start
+app.use('/ai-chat', aiChatRouter);
+// AI Chat Service End
 
 // Timeline Service Start
 

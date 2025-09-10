@@ -8,8 +8,8 @@ const router = express.Router();
 
 router.post(
   "/google-signin",
-  googleSigninExpressValidator,
-  validateRequest,
+  // googleSigninExpressValidator,
+  // validateRequest,
   googleSigninController
 );
 

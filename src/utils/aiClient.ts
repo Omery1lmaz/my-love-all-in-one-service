@@ -8,7 +8,7 @@ const openai = new OpenAI({ apiKey: "bd5fa4b533b34eb1aa813f286e47e415", baseURL:
 const openaiDirect = new OpenAI({ apiKey: "bd5fa4b533b34eb1aa813f286e47e415" });
 
 // Google Gemini AI client
-const genAI = new GoogleGenerativeAI("AIzaSyCZHS8hsdsaj5qDwD44tD-LyF8OR9BPgP8"); // Buraya gerçek API key gelecek
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || "AIzaSyCZHS8hsdsaj5qDwD44tD-LyF8OR9BPgP8");
 
 const systemPrompt = "You are a travel agent. Be descriptive and helpful";
 const userPrompt = "Tell me about San Francisco";
@@ -292,6 +292,488 @@ export async function generateImageWithGemini({
             urls: [],
             status: "error",
             error: error?.message || "Bilinmeyen hata",
+        };
+    }
+}
+
+/**
+ * AI ile sohbet etmek için kullanılan fonksiyon
+ * @param message Kullanıcının mesajı
+ * @param conversationHistory Önceki konuşma geçmişi
+ * @returns {Promise<{ response: string; status: string; error?: string }>}
+ */
+export async function chatWithAI({
+    message,
+    conversationHistory = [],
+}: {
+    message: string;
+    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+}): Promise<{ response: string; status: string; error?: string }> {
+    try {
+        const systemPrompt = `Sen samimi, yardımsever ve bilgili bir AI asistanısın. 
+        Kullanıcıların sorularını yanıtlar, sohbet eder ve onlara yardımcı olursun. 
+        Türkçe konuşuyorsun ve doğal, arkadaşça bir tonda yanıt veriyorsun. 
+        Kısa ve öz yanıtlar ver, ama gerektiğinde detaylı açıklamalar yap.`;
+
+        // Konuşma geçmişini mesaj formatına çevir
+        const messages = [
+            { role: "system" as const, content: systemPrompt },
+            ...conversationHistory.map(msg => ({
+                role: msg.role as "user" | "assistant",
+                content: msg.content
+            })),
+            { role: "user" as const, content: message }
+        ];
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages,
+            max_tokens: 500,
+            temperature: 0.7,
+        });
+
+        const response = completion.choices[0]?.message?.content || "Üzgünüm, şu anda yanıt veremiyorum.";
+
+        return {
+            response,
+            status: "success"
+        };
+    } catch (error: any) {
+        console.error("AI sohbet hatası:", error);
+        return {
+            response: "Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin.",
+            status: "error",
+            error: error?.message || "Bilinmeyen hata"
+        };
+    }
+}
+
+// Yaşam Koçları için uzmanlık alanları
+export const LIFE_COACHES = {
+  RELATIONSHIP_COACH: {
+    id: "relationship_coach",
+    name: "İlişki Koçu",
+    description: "İlişki problemleri, iletişim, güven ve romantik bağlar konusunda uzman",
+    systemPrompt: `Sen deneyimli bir İlişki Koçusun. İlişki problemleri, iletişim becerileri, güven sorunları ve romantik bağlar konusunda uzmansın.
+
+Uzmanlık Alanların:
+- İlişki problemlerini çözme
+- Etkili iletişim teknikleri
+- Güven ve bağlanma sorunları
+- Çatışma çözümü
+- Romantik ilişkilerde büyüme
+- Partner ile uyum sağlama
+
+Yaklaşımın:
+- Empatik ve destekleyici ol
+- Pratik öneriler ver
+- Kişisel deneyimlerini paylaş
+- Güvenli bir ortam yarat
+- Yargılamadan dinle
+- Yapıcı geri bildirim ver
+
+Türkçe konuş ve doğal, samimi bir tonda yanıt ver. Kısa ama etkili öneriler sun.`
+  },
+  
+  CAREER_COACH: {
+    id: "career_coach", 
+    name: "Kariyer Koçu",
+    description: "Kariyer gelişimi, iş değişikliği, hedef belirleme ve profesyonel büyüme konusunda uzman",
+    systemPrompt: `Sen deneyimli bir Kariyer Koçusun. Kariyer gelişimi, iş değişikliği, hedef belirleme ve profesyonel büyüme konusunda uzmansın.
+
+Uzmanlık Alanların:
+- Kariyer planlama ve hedef belirleme
+- İş değişikliği ve geçiş süreçleri
+- CV ve mülakat hazırlığı
+- Networking ve kişisel marka
+- Liderlik ve yönetim becerileri
+- İş-yaşam dengesi
+
+Yaklaşımın:
+- Stratejik düşün
+- Somut adımlar öner
+- Motivasyonu artır
+- Güçlü yanları vurgula
+- Zorlukları fırsata çevir
+- Uzun vadeli planlama yap
+
+Türkçe konuş ve profesyonel ama samimi bir tonda yanıt ver. Pratik ve uygulanabilir öneriler sun.`
+  },
+
+  HEALTH_COACH: {
+    id: "health_coach",
+    name: "Sağlık Koçu", 
+    description: "Fiziksel sağlık, beslenme, egzersiz ve yaşam tarzı değişiklikleri konusunda uzman",
+    systemPrompt: `Sen deneyimli bir Sağlık Koçusun. Fiziksel sağlık, beslenme, egzersiz ve yaşam tarzı değişiklikleri konusunda uzmansın.
+
+Uzmanlık Alanların:
+- Beslenme ve diyet planlama
+- Egzersiz programları
+- Stres yönetimi
+- Uyku düzeni
+- Mental sağlık
+- Sürdürülebilir yaşam tarzı değişiklikleri
+
+Yaklaşımın:
+- Bilimsel temelli öneriler ver
+- Kişiselleştirilmiş planlar oluştur
+- Küçük adımlarla başla
+- Motivasyonu sürdür
+- Sağlıklı alışkanlıklar geliştir
+- Dengeyi koru
+
+Türkçe konuş ve enerjik, destekleyici bir tonda yanıt ver. Sağlık hedeflerine ulaşmak için pratik öneriler sun.`
+  },
+
+  PERSONAL_DEVELOPMENT_COACH: {
+    id: "personal_development_coach",
+    name: "Kişisel Gelişim Koçu",
+    description: "Kişisel gelişim, özgüven, hedef belirleme ve yaşam amacı konusunda uzman", 
+    systemPrompt: `Sen deneyimli bir Kişisel Gelişim Koçusun. Kişisel gelişim, özgüven, hedef belirleme ve yaşam amacı konusunda uzmansın.
+
+Uzmanlık Alanların:
+- Özgüven geliştirme
+- Kişisel hedef belirleme
+- Zaman yönetimi
+- Stres ve kaygı yönetimi
+- Yaşam amacı keşfi
+- Kişisel sınırlar ve değerler
+
+Yaklaşımın:
+- İçsel gücü ortaya çıkar
+- Farkındalık yarat
+- Kişisel değerleri keşfet
+- Büyüme zihniyeti geliştir
+- Cesaretlendir ve destekle
+- Sürdürülebilir değişim sağla
+
+Türkçe konuş ve ilham verici, destekleyici bir tonda yanıt ver. Kişisel büyüme için derinlemesine rehberlik sun.`
+  },
+
+  FINANCIAL_COACH: {
+    id: "financial_coach",
+    name: "Finansal Koç",
+    description: "Para yönetimi, bütçe planlama, yatırım ve finansal hedefler konusunda uzman",
+    systemPrompt: `Sen deneyimli bir Finansal Koçsun. Para yönetimi, bütçe planlama, yatırım ve finansal hedefler konusunda uzmansın.
+
+Uzmanlık Alanların:
+- Bütçe planlama ve para yönetimi
+- Tasarruf stratejileri
+- Borç yönetimi
+- Yatırım planlama
+- Finansal hedef belirleme
+- Emeklilik planlama
+
+Yaklaşımın:
+- Pratik finansal öneriler ver
+- Kişisel duruma göre planla
+- Küçük adımlarla başla
+- Finansal okuryazarlık geliştir
+- Uzun vadeli düşün
+- Güvenli ve sürdürülebilir stratejiler öner
+
+Türkçe konuş ve güvenilir, profesyonel bir tonda yanıt ver. Finansal özgürlük için somut adımlar sun.`
+  }
+};
+
+/**
+ * Belirli bir yaşam koçu ile sohbet etmek için kullanılan fonksiyon
+ * @param message Kullanıcının mesajı
+ * @param coachId Koç ID'si
+ * @param conversationHistory Önceki konuşma geçmişi
+ * @returns {Promise<{ response: string; status: string; error?: string }>}
+ */
+export async function chatWithLifeCoach({
+    message,
+    coachId,
+    conversationHistory = [],
+}: {
+    message: string;
+    coachId: string;
+    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+}): Promise<{ response: string; status: string; error?: string }> {
+    try {
+        console.log(coachId, "coachId")
+        const coach = Object.values(LIFE_COACHES).find(c => c.id === coachId);
+            
+        if (!coach) {
+            return {
+                response: "Üzgünüm, belirtilen koç bulunamadı.",
+                status: "error",
+                error: "Geçersiz koç ID'si"
+            };
+        }
+
+        // Koçun sistem promptunu kullan
+        const systemPrompt = coach.systemPrompt;
+
+        // Konuşma geçmişini mesaj formatına çevir
+        const messages = [
+            { role: "system" as const, content: systemPrompt },
+            ...conversationHistory.map(msg => ({
+                role: msg.role as "user" | "assistant",
+                content: msg.content
+            })),
+            { role: "user" as const, content: message }
+        ];
+
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages,
+            max_tokens: 600,
+            temperature: 0.7,
+        });
+
+        const response = completion.choices[0]?.message?.content || "Üzgünüm, şu anda yanıt veremiyorum.";
+
+        return {
+            response,
+            status: "success"
+        };
+    } catch (error: any) {
+        console.error("Yaşam koçu sohbet hatası:", error);
+        return {
+            response: "Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin.",
+            status: "error",
+            error: error?.message || "Bilinmeyen hata"
+        };
+    }
+}
+
+/**
+ * Mevcut yaşam koçlarını listeler
+ * @returns {Array} Koç listesi
+ */
+export function getAvailableLifeCoaches() {
+    return Object.values(LIFE_COACHES).map(coach => ({
+        id: coach.id,
+        name: coach.name,
+        description: coach.description
+    }));
+}
+
+/**
+ * Google Gemini AI ile sohbet etmek için kullanılan fonksiyon
+ * @param message Kullanıcının mesajı
+ * @param conversationHistory Önceki konuşma geçmişi
+ * @returns {Promise<{ response: string; status: string; error?: string }>}
+ */
+export async function chatWithGoogleAI({
+    message,
+    conversationHistory = [],
+}: {
+    message: string;
+    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+}): Promise<{ response: string; status: string; error?: string }> {
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        // Konuşma geçmişini Gemini formatına çevir
+        // Google AI'da history'nin ilk mesajı mutlaka 'user' olmalı
+        const formattedHistory = conversationHistory.map(msg => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }]
+        }));
+
+        // Eğer history varsa ve ilk mesaj 'model' ise, başına boş bir 'user' mesajı ekle
+        if (formattedHistory.length > 0 && formattedHistory[0].role === "model") {
+            formattedHistory.unshift({
+                role: "user",
+                parts: [{ text: "Merhaba" }]
+            });
+        }
+
+        const chat = model.startChat({
+            history: formattedHistory
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        const text = response.text();
+
+        return {
+            response: text,
+            status: "success"
+        };
+    } catch (error: any) {
+        console.error("Google AI sohbet hatası:", error);
+        return {
+            response: "Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin.",
+            status: "error",
+            error: error?.message || "Bilinmeyen hata"
+        };
+    }
+}
+
+/**
+ * Google Gemini AI ile yaşam koçu sohbeti
+ * @param message Kullanıcının mesajı
+ * @param coachId Koç ID'si
+ * @param conversationHistory Önceki konuşma geçmişi
+ * @returns {Promise<{ response: string; status: string; error?: string }>}
+ */
+export async function chatWithGoogleLifeCoach({
+    message,
+    coachId,
+    conversationHistory = [],
+}: {
+    message: string;
+    coachId: string;
+    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+}): Promise<{ response: string; status: string; error?: string }> {
+    try {
+        const coach = Object.values(LIFE_COACHES).find(c => c.id === coachId);
+            
+        if (!coach) {
+            return {
+                response: "Üzgünüm, belirtilen koç bulunamadı.",
+                status: "error",
+                error: "Geçersiz koç ID'si"
+            };
+        }
+
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            systemInstruction: coach.systemPrompt
+        });
+
+        // Konuşma geçmişini Gemini formatına çevir
+        // Google AI'da history'nin ilk mesajı mutlaka 'user' olmalı
+        const formattedHistory = conversationHistory.map(msg => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }]
+        }));
+
+        // Eğer history varsa ve ilk mesaj 'model' ise, başına boş bir 'user' mesajı ekle
+        if (formattedHistory.length > 0 && formattedHistory[0].role === "model") {
+            formattedHistory.unshift({
+                role: "user",
+                parts: [{ text: "Merhaba" }]
+            });
+        }
+
+        const chat = model.startChat({
+            history: formattedHistory
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        const text = response.text();
+
+        return {
+            response: text,
+            status: "success"
+        };
+    } catch (error: any) {
+        console.error("Google AI yaşam koçu sohbet hatası:", error);
+        return {
+            response: "Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin.",
+            status: "error",
+            error: error?.message || "Bilinmeyen hata"
+        };
+    }
+}
+
+/**
+ * Google Gemini AI ile metin analizi ve özetleme
+ * @param text Analiz edilecek metin
+ * @param analysisType Analiz türü ('summary', 'sentiment', 'keywords', 'translation')
+ * @param targetLanguage Hedef dil (çeviri için)
+ * @returns {Promise<{ result: string; status: string; error?: string }>}
+ */
+export async function analyzeTextWithGoogleAI({
+    text,
+    analysisType = 'summary',
+    targetLanguage = 'tr'
+}: {
+    text: string;
+    analysisType?: 'summary' | 'sentiment' | 'keywords' | 'translation';
+    targetLanguage?: string;
+}): Promise<{ result: string; status: string; error?: string }> {
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        let prompt = "";
+        
+        switch (analysisType) {
+            case 'summary':
+                prompt = `Aşağıdaki metni Türkçe olarak özetle, ana noktaları vurgula:\n\n${text}`;
+                break;
+            case 'sentiment':
+                prompt = `Aşağıdaki metnin duygu analizini yap (pozitif, negatif, nötr) ve kısa bir açıklama ver:\n\n${text}`;
+                break;
+            case 'keywords':
+                prompt = `Aşağıdaki metinden anahtar kelimeleri çıkar ve listele:\n\n${text}`;
+                break;
+            case 'translation':
+                prompt = `Aşağıdaki metni ${targetLanguage} diline çevir:\n\n${text}`;
+                break;
+            default:
+                prompt = `Aşağıdaki metni analiz et:\n\n${text}`;
+        }
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const analyzedText = response.text();
+
+        return {
+            result: analyzedText,
+            status: "success"
+        };
+    } catch (error: any) {
+        console.error("Google AI metin analizi hatası:", error);
+        return {
+            result: "",
+            status: "error",
+            error: error?.message || "Bilinmeyen hata"
+        };
+    }
+}
+
+/**
+ * Google Gemini AI ile görsel analizi (görsel URL'si ile)
+ * @param imageUrl Analiz edilecek görselin URL'si
+ * @param prompt Görsel hakkında sorulacak soru
+ * @returns {Promise<{ result: string; status: string; error?: string }>}
+ */
+export async function analyzeImageWithGoogleAI({
+    imageUrl,
+    prompt = "Bu görselde ne görüyorsun? Detaylı olarak açıkla."
+}: {
+    imageUrl: string;
+    prompt?: string;
+}): Promise<{ result: string; status: string; error?: string }> {
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        // Görseli fetch et
+        const response = await fetch(imageUrl);
+        const imageBuffer = await response.arrayBuffer();
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+
+        const result = await model.generateContent([
+            prompt,
+            {
+                inlineData: {
+                    data: base64Image,
+                    mimeType: "image/jpeg"
+                }
+            }
+        ]);
+
+        const response_text = await result.response;
+        const analyzedText = response_text.text();
+
+        return {
+            result: analyzedText,
+            status: "success"
+        };
+    } catch (error: any) {
+        console.error("Google AI görsel analizi hatası:", error);
+        return {
+            result: "",
+            status: "error",
+            error: error?.message || "Bilinmeyen hata"
         };
     }
 }
