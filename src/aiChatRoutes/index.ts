@@ -3,7 +3,7 @@ import { requireAuth, validateRequest } from "@heaven-nsoft/common";
 import { createChatSession } from "../aiChatControllers/createChatSession";
 import { getChatSessions } from "../aiChatControllers/getChatSessions";
 import { getChatMessages } from "../aiChatControllers/getChatMessages";
-import { sendMessage } from "../aiChatControllers/sendMessage";
+import { sendMessage, sendMessageStream } from "../aiChatControllers/sendMessage";
 import { deleteChatSession } from "../aiChatControllers/deleteChatSession";
 import { updateChatSessionTitle } from "../aiChatControllers/updateChatSessionTitle";
 import { getLifeCoaches } from "../aiChatControllers/getLifeCoaches";
@@ -29,6 +29,7 @@ router.delete("/sessions/:sessionId", deleteChatSession);
 
 // Mesaj gönderme
 router.post("/sessions/:sessionId/messages", sendMessageValidator, validateRequest, sendMessage);
+router.post("/sessions/:sessionId/messages/stream", sendMessageValidator, validateRequest, sendMessageStream);
 
 // Google AI analiz özellikleri
 router.use("/analyze", analyzeTextRouter);

@@ -3,6 +3,7 @@ import { Server as HTTPServer } from "http";
 import { Message, ChatRoom } from "../Models/chat";
 import { OnlineStatus } from "../Models/onlineStatus";
 import { User } from "../Models/user";
+import { expoNotificationService } from "./expoNotificationService";
 import jwt from "jsonwebtoken";
 
 interface AuthenticatedSocket {
@@ -185,6 +186,25 @@ export class ChatSocketService {
               { path: 'receiverId', select: 'name profilePhoto nickname' }
             ]);
             console.log("✅ Message populated with user info");
+
+            // Send push notification to receiver if they have expo push token
+            try {
+              const receiver = await User.findById(receiverId);
+              if (receiver && receiver.expoPushToken) {
+                const sender = await User.findById(userId);
+                const senderName = sender?.nickname || sender?.name || 'Partner';
+                await expoNotificationService.sendChatNotification(
+                  receiver.expoPushToken,
+                  senderName,
+                  content,
+                  chatRoom!._id.toString()
+                );
+                console.log("📱 Push notification sent for socket message");
+              }
+            } catch (notificationError) {
+              console.error("❌ Error sending push notification via socket:", notificationError);
+              // Don't fail the message sending if notification fails
+            }
 
             // Emit to receiver
             this.io.to(`user:${receiverId}`).emit("new_message", {

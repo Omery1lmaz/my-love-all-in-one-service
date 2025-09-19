@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { User } from "../Models/user";
+import { expoNotificationService } from "../services/expoNotificationService";
 import jwt from "jsonwebtoken";
 
 const updateMoodController = async (req: Request, res: Response) => {
@@ -35,6 +36,25 @@ const updateMoodController = async (req: Request, res: Response) => {
     });
 
     await user.save();
+
+    // Send push notification to partner if they have expo push token
+    if (user.partnerId) {
+      try {
+        const partner = await User.findById(user.partnerId);
+        if (partner && partner.expoPushToken) {
+          const userName = user.nickname || user.name || 'Partner';
+          await expoNotificationService.sendMoodUpdateNotification(
+            partner.expoPushToken,
+            userName,
+            mood
+          );
+          console.log('Push notification sent for mood update');
+        }
+      } catch (notificationError) {
+        console.error('Error sending mood update notification:', notificationError);
+        // Don't fail the mood update if notification fails
+      }
+    }
 
     res.status(200).json({
       message: "Mood başarıyla güncellendi",

@@ -5,6 +5,7 @@ import {
   BadRequestError,
   NotAuthorizedError,
 } from "@heaven-nsoft/common";
+import { expoNotificationService } from "../services/expoNotificationService";
 import jwt from "jsonwebtoken";
 export const createTodaySongController = async (
   req: Request,
@@ -81,6 +82,22 @@ export const createTodaySongController = async (
           partner.dailySong = partner.dailySong || [];
           partner.dailySong.push(newSong);
           await partner.save();
+
+          // Send push notification to partner
+          if (partner.expoPushToken) {
+            try {
+              const userName = user.nickname || user.name || 'Partner';
+              await expoNotificationService.sendDailySongNotification(
+                partner.expoPushToken,
+                userName,
+                name
+              );
+              console.log('Push notification sent for daily song');
+            } catch (notificationError) {
+              console.error('Error sending daily song notification:', notificationError);
+              // Don't fail the song creation if notification fails
+            }
+          }
         }
       }
       await user.save();

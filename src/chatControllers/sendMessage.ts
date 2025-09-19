@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { Message, ChatRoom } from "../Models/chat";
 import { User } from "../Models/user";
 import { OnlineStatus } from "../Models/onlineStatus";
+import { expoNotificationService } from "../services/expoNotificationService";
 import mongoose from "mongoose";
 
 export const sendMessage = async (req: Request, res: Response) => {
@@ -81,6 +82,23 @@ export const sendMessage = async (req: Request, res: Response) => {
       { path: 'senderId', select: 'name profilePhoto nickname' },
       { path: 'receiverId', select: 'name profilePhoto nickname' }
     ]);
+
+    // Send push notification to receiver if they have expo push token
+    if (receiver.expoPushToken) {
+      try {
+        const senderName = sender.nickname || sender.name || 'Partner';
+        await expoNotificationService.sendChatNotification(
+          receiver.expoPushToken,
+          senderName,
+          content,
+          chatRoom!._id.toString()
+        );
+        console.log('Push notification sent for chat message');
+      } catch (notificationError) {
+        console.error('Error sending push notification:', notificationError);
+        // Don't fail the message sending if notification fails
+      }
+    }
 
     res.status(201).json({
       success: true,

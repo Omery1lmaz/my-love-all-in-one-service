@@ -675,6 +675,115 @@ export async function chatWithGoogleLifeCoach({
 }
 
 /**
+ * Google Gemini AI ile streaming sohbet
+ * @param message Kullanıcının mesajı
+ * @param conversationHistory Önceki konuşma geçmişi
+ * @returns {AsyncGenerator<string>} Streaming response
+ */
+export async function* chatWithGoogleAIStream({
+    message,
+    conversationHistory = [],
+}: {
+    message: string;
+    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+}): AsyncGenerator<string> {
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        // Konuşma geçmişini Gemini formatına çevir
+        const formattedHistory = conversationHistory.map(msg => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }]
+        }));
+
+        // Eğer history varsa ve ilk mesaj 'model' ise, başına boş bir 'user' mesajı ekle
+        if (formattedHistory.length > 0 && formattedHistory[0].role === "model") {
+            formattedHistory.unshift({
+                role: "user",
+                parts: [{ text: "Merhaba" }]
+            });
+        }
+
+        const chat = model.startChat({
+            history: formattedHistory
+        });
+
+        const result = await chat.sendMessageStream(message);
+        
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            if (chunkText) {
+                yield chunkText;
+            }
+        }
+    } catch (error: any) {
+        console.error("Google AI streaming sohbet hatası:", error);
+        yield "Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin.";
+    }
+}
+
+/**
+ * Google Gemini AI ile streaming yaşam koçu sohbeti
+ * @param message Kullanıcının mesajı
+ * @param coachId Koç ID'si
+ * @param conversationHistory Önceki konuşma geçmişi
+ * @returns {AsyncGenerator<string>} Streaming response
+ */
+export async function* chatWithGoogleLifeCoachStream({
+    message,
+    coachId,
+    conversationHistory = [],
+}: {
+    message: string;
+    coachId: string;
+    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+}): AsyncGenerator<string> {
+    try {
+        const coach = Object.values(LIFE_COACHES).find(c => c.id === coachId);
+            
+        if (!coach) {
+            yield "Üzgünüm, belirtilen koç bulunamadı.";
+            return;
+        }
+
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            systemInstruction: coach.systemPrompt
+        });
+
+        // Konuşma geçmişini Gemini formatına çevir
+        const formattedHistory = conversationHistory.map(msg => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }]
+        }));
+
+        // Eğer history varsa ve ilk mesaj 'model' ise, başına boş bir 'user' mesajı ekle
+        if (formattedHistory.length > 0 && formattedHistory[0].role === "model") {
+            formattedHistory.unshift({
+                role: "user",
+                parts: [{ text: "Merhaba" }]
+            });
+        }
+
+        const chat = model.startChat({
+            history: formattedHistory
+        });
+
+        const result = await chat.sendMessageStream(message);
+        
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            if (chunkText) {
+                yield chunkText;
+            }
+        }
+    } catch (error: any) {
+        console.error("Google AI streaming yaşam koçu sohbet hatası:", error);
+        yield "Üzgünüm, şu anda yanıt veremiyorum. Lütfen daha sonra tekrar deneyin.";
+    }
+}
+
+/**
  * Google Gemini AI ile metin analizi ve özetleme
  * @param text Analiz edilecek metin
  * @param analysisType Analiz türü ('summary', 'sentiment', 'keywords', 'translation')

@@ -94,6 +94,8 @@ import { getTimelineByIdRouter } from "./timelineRoutes/getTimelineById";
 import { uploadUserSharedProfilePhotoRouter } from "./photoRoutes/uploadUserSharedProfilePhoto";
 import { chatRouter } from "./chatRoutes";
 import { aiChatRouter } from "./aiChatRoutes";
+import { updateExpoPushTokenRouter } from "./routes/updateExpoPushToken";
+import { sendTestNotificationRouter } from "./routes/sendTestNotification";
 
 const app = express();
 app.set("trust proxy", true);
@@ -149,6 +151,8 @@ app.use(detailRouter);
 app.use(updateUserNameRouter);
 app.use(statsRouter);
 app.use(updateUserProfileDetailsRouter);
+app.use(updateExpoPushTokenRouter);
+app.use(sendTestNotificationRouter);
 
 // Partner's Profile Management
 app.use(partnerRouter);

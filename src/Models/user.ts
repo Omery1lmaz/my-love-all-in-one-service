@@ -222,6 +222,8 @@ interface UserAttrs {
     }[];
     score?: number;
   }[];
+  // Expo push notification token
+  expoPushToken?: string;
 }
 
 interface UserDoc extends mongoose.Document {
@@ -354,6 +356,7 @@ interface UserDoc extends mongoose.Document {
     }[];
     score?: number;
   }[];
+  expoPushToken?: string;
 }
 
 interface UserModel extends mongoose.Model<UserDoc> {
@@ -648,6 +651,7 @@ const userSchema = new mongoose.Schema<UserDoc>(
         userScore: { type: Number, default: 0, required: true },
       },
     ],
+    expoPushToken: { type: String, required: false },
     favoriteMovie: {
       adult: Boolean,
       backdrop_path: String,
