@@ -92,6 +92,7 @@ import { createTimelineRouter } from "./timelineRoutes/createTimeline";
 import { getTimelineByUserRouter } from "./timelineRoutes/getTimelineByUser";
 import { getTimelineByIdRouter } from "./timelineRoutes/getTimelineById";
 import { uploadUserSharedProfilePhotoRouter } from "./photoRoutes/uploadUserSharedProfilePhoto";
+import getStorageInfoRouter from "./photoRoutes/getStorageInfo";
 import { chatRouter } from "./chatRoutes";
 import { aiChatRouter } from "./aiChatRoutes";
 import { updateExpoPushTokenRouter } from "./routes/updateExpoPushToken";
@@ -251,6 +252,7 @@ app.use('/photo', updateUserPhotoMomentRouter);
 app.use('/photo', uploadUserProfilePhotoRouter);
 app.use('/photo', uploadMultiPhotoDailyJourneyRouter);
 app.use('/photo', uploadUserSharedProfilePhotoRouter);
+app.use('/photo', getStorageInfoRouter);
 
 // Photo Service End
 

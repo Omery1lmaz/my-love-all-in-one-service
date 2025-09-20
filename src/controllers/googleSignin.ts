@@ -17,11 +17,11 @@ export const googleSigninController = async (
   next: NextFunction
 ) => {
   console.log("=== Google Signin Controller Started ===");
-  console.log(req.body, "req.body coming")
+  console.log(req.body, "req.body coming");
   console.log("Request Body:", {
     idToken: req.body.idToken ? "Present" : "Missing",
     serverAuthCode: req.body.serverAuthCode ? "Present" : "Missing",
-    user: req.body.user ? "Present" : "Missing"
+    user: req.body.user ? "Present" : "Missing",
   });
 
   try {
@@ -29,20 +29,20 @@ export const googleSigninController = async (
     console.log("Extracted data:", {
       hasIdToken: !!idToken,
       hasServerAuthCode: !!serverAuthCode,
-      userEmail: user?.email
+      userEmail: user?.email,
     });
 
     // Validate required fields
     if (!idToken) {
       console.error("ERROR: idToken is missing from request body");
       res.status(400).json({ error: "idToken is required" });
-      return
+      return;
     }
 
     if (!user || !user.email) {
       console.error("ERROR: user data or email is missing from request body");
       res.status(400).json({ error: "User data and email are required" });
-      return
+      return;
     }
 
     console.log("Verifying ID token...");
@@ -51,28 +51,40 @@ export const googleSigninController = async (
 
     console.log("Checking for existing user with googleId:", payload?.sub);
     let existingUser = await User.findOne({ googleId: payload!.sub });
-    console.log("Database query result for googleId:", existingUser ? "User found" : "No user found");
+    console.log(
+      "Database query result for googleId:",
+      existingUser ? "User found" : "No user found"
+    );
 
     if (!existingUser) {
       console.log("No existing user found with googleId, checking email...");
       const emailExist = await User.findOne({ email: user.email });
-      console.log("Database query result for email:", emailExist ? "Email exists" : "Email not found");
+      console.log(
+        "Database query result for email:",
+        emailExist ? "Email exists" : "Email not found"
+      );
 
       if (!emailExist) {
         console.log("No user found with email, creating new user...");
 
         // Validate serverAuthCode for new user creation
         if (!serverAuthCode) {
-          console.error("ERROR: serverAuthCode is required for new user creation");
-          res.status(400).json({ error: "serverAuthCode is required for new user creation" });
-          return
+          console.error(
+            "ERROR: serverAuthCode is required for new user creation"
+          );
+          res
+            .status(400)
+            .json({
+              error: "serverAuthCode is required for new user creation",
+            });
+          return;
         }
 
         console.log("Making Google OAuth token exchange request...");
         console.log("OAuth request details:", {
           hasServerAuthCode: !!serverAuthCode,
           hasClientId: !!googleClientId,
-          hasClientSecret: !!googleClientSecret
+          hasClientSecret: !!googleClientSecret,
         });
 
         axios
@@ -87,7 +99,10 @@ export const googleSigninController = async (
             console.log("Google OAuth token exchange successful");
             console.log("OAuth response status:", response.status);
             const { refresh_token } = response.data;
-            console.log("Refresh token received:", refresh_token ? "Present" : "Missing");
+            console.log(
+              "Refresh token received:",
+              refresh_token ? "Present" : "Missing"
+            );
 
             console.log("Generating unique invitation code...");
             const userPartnerCode = await generateUniqueInvitationCode();
@@ -111,7 +126,7 @@ export const googleSigninController = async (
               name: newUserData.name,
               hasImageUrl: !!newUserData.imageUrl,
               hasRefreshToken: !!newUserData.refreshToken,
-              hasPartnerCode: !!newUserData.partnerInvitationCode
+              hasPartnerCode: !!newUserData.partnerInvitationCode,
             });
 
             existingUser = new User(newUserData);
@@ -135,7 +150,9 @@ export const googleSigninController = async (
             };
             console.log("Event data to publish:", eventData);
 
-            await new UserCreatedPublisher(natsWrapper.client).publish(eventData);
+            await new UserCreatedPublisher(natsWrapper.client).publish(
+              eventData
+            );
             console.log("UserCreated event published successfully");
 
             console.log("Creating JWT token...");
@@ -147,7 +164,7 @@ export const googleSigninController = async (
             console.log("Token details:", {
               userId: existingUser._id,
               partnerId: existingUser.partnerId,
-              tokenLength: token?.length || 0
+              tokenLength: token?.length || 0,
             });
 
             console.log("=== Google Signin SUCCESS - New User Created ===");
@@ -167,7 +184,7 @@ export const googleSigninController = async (
               hasUser: !!responseData.user,
               hasGoogleToken: !!responseData.googleToken,
               hasToken: !!responseData.token,
-              userEmail: responseData.email
+              userEmail: responseData.email,
             });
 
             res.status(200).json(responseData);
@@ -183,13 +200,13 @@ export const googleSigninController = async (
               url: err.config?.url,
               method: err.config?.method,
               hasClientId: !!err.config?.data?.client_id,
-              hasClientSecret: !!err.config?.data?.client_secret
+              hasClientSecret: !!err.config?.data?.client_secret,
             });
             console.error("Full error object:", err);
 
             res.status(500).json({
               error: "Geçersiz kimlik",
-              details: err.response?.data || err.message
+              details: err.response?.data || err.message,
             });
           });
       } else {
@@ -199,13 +216,13 @@ export const googleSigninController = async (
           id: emailExist._id,
           email: emailExist.email,
           provider: emailExist.provider,
-          googleId: emailExist.googleId
+          googleId: emailExist.googleId,
         });
         console.error("This email is not associated with Google account");
 
         res.status(500).json({
           error: "Geçersiz kimlik doğrulama yöntemi",
-          message: "Email already exists with different provider"
+          message: "Email already exists with different provider",
         });
       }
     } else {
@@ -216,7 +233,7 @@ export const googleSigninController = async (
         name: existingUser.name,
         provider: existingUser.provider,
         googleId: existingUser.googleId,
-        isActive: existingUser.isActive
+        isActive: existingUser.isActive,
       });
 
       const token = createToken(
@@ -227,7 +244,7 @@ export const googleSigninController = async (
       console.log("Token details:", {
         userId: existingUser._id,
         partnerId: existingUser.partnerId,
-        tokenLength: token?.length || 0
+        tokenLength: token?.length || 0,
       });
 
       console.log("=== Google Signin SUCCESS - Existing User ===");
@@ -247,7 +264,7 @@ export const googleSigninController = async (
         hasUser: !!responseData.user,
         hasGoogleToken: !!responseData.googleToken,
         hasToken: !!responseData.token,
-        userEmail: responseData.email
+        userEmail: responseData.email,
       });
 
       res.status(200).json(responseData);
@@ -261,7 +278,7 @@ export const googleSigninController = async (
       hasIdToken: !!req.body?.idToken,
       hasServerAuthCode: !!req.body?.serverAuthCode,
       userEmail: req.body?.user?.email,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
     console.error("Full error object:", error);
 
@@ -285,13 +302,13 @@ export const googleSigninController = async (
     console.error("Sending error response:", {
       statusCode,
       errorMessage,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
 
     res.status(statusCode).json({
       error: errorMessage,
       details: (error as Error)?.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 };

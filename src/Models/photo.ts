@@ -43,6 +43,9 @@ interface PhotoAttrs {
   likes?: number;
   comments?: number;
   fileType?: string;
+  fileSize?: number;
+  originalName?: string;
+  mimeType?: string;
   photoDate: Date;
   isDeleted?: boolean;
   moment: {
@@ -84,6 +87,9 @@ interface PhotoDoc extends Document {
   likes: number;
   comments: number;
   fileType: string;
+  fileSize?: number;
+  originalName?: string;
+  mimeType?: string;
   isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -93,7 +99,7 @@ interface PhotoModel extends Model<PhotoDoc> {
   build(attrs: PhotoAttrs): PhotoDoc;
 }
 
-const LocationSchema = new Schema<Location>(
+const LocationSchema = new Schema(
   {
     address: { type: String },
     city: { type: String },
@@ -118,7 +124,7 @@ const momentSubSchema = new Schema(
 );
 
 // ** Fotoğraf Şeması Tanımlama **
-const photoSchema = new Schema<PhotoDoc>(
+const photoSchema = new Schema(
   {
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     album: { type: Schema.Types.ObjectId, ref: "Album", default: null },
@@ -148,6 +154,9 @@ const photoSchema = new Schema<PhotoDoc>(
     likes: { type: Number, default: 0 },
     comments: { type: Number, default: 0 },
     fileType: { type: String, default: "image/jpeg" },
+    fileSize: { type: Number, default: 0 },
+    originalName: { type: String, default: "" },
+    mimeType: { type: String, default: "" },
     isDeleted: { type: Boolean, default: false },
     moment: {
       me: { type: momentSubSchema, required: false },
@@ -163,6 +172,6 @@ photoSchema.statics.build = (attrs: PhotoAttrs) => {
 };
 
 // ** Fotoğraf Modelini Oluşturma **
-const Photo = mongoose.model<PhotoDoc, PhotoModel>("Photo", photoSchema);
+const Photo = mongoose.model("Photo", photoSchema);
 
 export { Photo };

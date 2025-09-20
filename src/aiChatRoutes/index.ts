@@ -31,8 +31,8 @@ router.delete("/sessions/:sessionId", deleteChatSession);
 router.post("/sessions/:sessionId/messages", sendMessageValidator, validateRequest, sendMessage);
 router.post("/sessions/:sessionId/messages/stream", sendMessageValidator, validateRequest, sendMessageStream);
 
-// Google AI analiz özellikleri
-router.use("/analyze", analyzeTextRouter);
-router.use("/analyze", analyzeImageRouter);
+// // Google AI analiz özellikleri
+// router.use("/analyze", analyzeTextRouter);
+// router.use("/analyze", analyzeImageRouter);
 
 export { router as aiChatRouter };
