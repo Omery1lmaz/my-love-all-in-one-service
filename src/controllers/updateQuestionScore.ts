@@ -14,7 +14,7 @@ export const updateQuestionScoreController = async (
   const { score, message } = req.body;
   console.log("update question score", score, message, id)
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }

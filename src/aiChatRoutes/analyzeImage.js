@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.analyzeImageRouter = void 0;
+const express_1 = require("express");
+const analyzeImage_1 = require("../aiChatControllers/analyzeImage");
+const analyzeImage_2 = require("../aiChatExpressValidators/analyzeImage");
+const common_1 = require("@heaven-nsoft/common");
+const router = (0, express_1.Router)();
+exports.analyzeImageRouter = router;
+router.post("/image", analyzeImage_2.analyzeImageValidator, common_1.validateRequest, analyzeImage_1.analyzeImage);

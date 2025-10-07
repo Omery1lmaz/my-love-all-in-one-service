@@ -17,7 +17,8 @@ export const signinController = async (
       return;
     }
 
-    if (user.provider !== "email") {
+    if (user.provider !== "email" && !user.password) {
+      console.log("Bu kullanıcı farklı bir sağlayıcıya bağlı");
       next(new BadRequestError("Bu kullanıcı farklı bir sağlayıcıya bağlı"));
       return;
     }

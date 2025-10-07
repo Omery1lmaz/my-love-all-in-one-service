@@ -7,8 +7,8 @@ const router = express.Router();
 
 router.get(
   "/forget-password-resend-otp",
-  forgetPasswordResendOTPExpressValidator,
-  validateRequest,
+  // forgetPasswordResendOTPExpressValidator,
+  // validateRequest,
   forgetPasswordResendOTPController
 );
 

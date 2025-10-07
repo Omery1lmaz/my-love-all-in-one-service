@@ -10,7 +10,7 @@ export const updateUserRelationshipDateController = async (
   const authHeader = req.headers.authorization;
   const { relationshipStartDate } = req.body;
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
@@ -24,24 +24,25 @@ export const updateUserRelationshipDateController = async (
     const decodedToken = jwt.verify(token, process.env.SECRET_KEY!) as {
       id: string;
     };
-    console.log(decodedToken, "decoded token");
+    
     const user = await User.findById(
       new mongoose.Types.ObjectId(decodedToken.id)
     );
     if (!user) {
+      console.log("user yok");
       res.status(404).json({ message: "Kullanıcı bulunamadı" });
       return;
     }
     const relationshipDate = new Date(relationshipStartDate);
     const partner = await User.findById(user.partnerId);
     if (partner) {
+      console.log("partner var");
       partner.relationshipStartDate = relationshipDate;
       await partner.save();
-      res.status(404).json({ message: "Partner bulunamadı" });
-      return;
     }
     user.relationshipStartDate = relationshipDate;
     await user.save();
+    console.log("user saved");
     res.status(200).json({
       message: "İlişki başlangıç tarihi güncellendi",
       status: "success",

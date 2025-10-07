@@ -3,6 +3,8 @@ import { DailyJournal } from "../Models/dailyJournal";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { User } from "../Models/user";
+import { Subscription } from "../Models/subscription";
+import { LovePointsService } from "../services/lovePointsService";
 
 const createJournalController = async (req: Request, res: Response) => {
   console.log("createJournalController");
@@ -35,6 +37,61 @@ const createJournalController = async (req: Request, res: Response) => {
       return;
     }
 
+    // Ensure user has a subscription (create default if not exists)
+    console.log(`Ensuring subscription exists for journal creation - user: ${decodedToken.id}`);
+    let userSubscription;
+    try {
+      userSubscription = await Subscription.getDefaultSubscription(
+        new mongoose.Types.ObjectId(decodedToken.id)
+      );
+      console.log(`Subscription verified/created for journal creation - user: ${decodedToken.id}`, {
+        subscriptionId: userSubscription._id,
+        planType: userSubscription.planType,
+        isActive: userSubscription.isActive
+      });
+      
+      // Double check that subscription is active
+      if (!userSubscription.isActive) {
+        console.warn(`Subscription found but inactive for user: ${decodedToken.id}, activating...`);
+        userSubscription.isActive = true;
+        await userSubscription.save();
+        console.log(`Subscription activated for user: ${decodedToken.id}`);
+      }
+    } catch (error) {
+      console.error(`Error with subscription for journal creation - user ${decodedToken.id}:`, error);
+      res.status(400).json({ message: "Subscription doğrulanamadı" });
+      return;
+    }
+
+    // Check if user can create more journals (basic check)
+    const existingJournals = await DailyJournal.countDocuments({ user: decodedToken.id });
+    console.log(`Journal count check for user: ${decodedToken.id}`, {
+      existingJournals,
+      planType: userSubscription.planType
+    });
+
+    // Basic journal limit check (can be enhanced based on plan)
+    const maxJournals = userSubscription.planType === 'free' ? 30 : 
+                       userSubscription.planType === 'premium' ? 365 : 1000;
+    
+    if (existingJournals >= maxJournals) {
+      console.error(`Journal limit exceeded for user: ${decodedToken.id}`, {
+        existingJournals,
+        maxJournals,
+        planType: userSubscription.planType
+      });
+      res.status(400).json({ 
+        message: `Günlük limiti aşıldı. Mevcut planınızla ${maxJournals} günlük oluşturabilirsiniz.` 
+      });
+      return;
+    }
+
+    console.log(`Journal creation allowed for user: ${decodedToken.id}`, {
+      existingJournals,
+      maxJournals,
+      planType: userSubscription.planType
+    });
+
     const journal = new DailyJournal({
       user: decodedToken.id,
       date: new Date(),
@@ -47,13 +104,43 @@ const createJournalController = async (req: Request, res: Response) => {
       weather,
     });
 
+    console.log(`Saving journal for user: ${decodedToken.id}`);
     await journal.save();
+    
+    // Add LovePoints for daily note creation
+    const pointsResult = await LovePointsService.addPoints(
+      decodedToken.id, 
+      "daily_note", 
+      { journalId: journal._id, mood: mood }
+    );
+    
+    console.log(`Journal created successfully for user: ${decodedToken.id}`, {
+      journalId: journal._id,
+      journalTitle: journal.title,
+      planType: userSubscription.planType,
+      remainingJournals: maxJournals - (existingJournals + 1),
+      pointsAdded: pointsResult.userLevel?.pointsAdded || 0,
+      newAchievements: pointsResult.newAchievements?.length || 0,
+      leveledUp: pointsResult.levelUp?.leveledUp || false
+    });
 
     res.status(201).json({
       message: "Günlük başarıyla oluşturuldu",
       status: "success",
       statusCode: 201,
       data: journal,
+      subscriptionInfo: {
+        planType: userSubscription.planType,
+        remainingJournals: maxJournals - (existingJournals + 1),
+        maxJournals: maxJournals
+      },
+      gamification: {
+        pointsAdded: pointsResult.userLevel?.pointsAdded || 0,
+        newAchievements: pointsResult.newAchievements || [],
+        levelUp: pointsResult.levelUp || { leveledUp: false },
+        currentLevel: pointsResult.userLevel?.currentLevel || 1,
+        currentLevelTitle: pointsResult.userLevel?.currentLevelTitle || "New Flame"
+      }
     });
   } catch (error) {
     console.log(error, "error");

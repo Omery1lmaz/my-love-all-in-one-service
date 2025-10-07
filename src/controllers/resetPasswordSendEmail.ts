@@ -1,20 +1,24 @@
 import jwt from "jsonwebtoken";
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { User } from "../Models/user";
 import { generateOTP } from "../helpers/generateOTP";
 import transporter from "../utils/mailTransporter";
+import { BadRequestError } from "@heaven-nsoft/common";
 export const resetPasswordSendEmailController = async (
   req: Request,
-  res: Response
+  res: Response,
+  next: NextFunction
 ) => {
   try {
+    console.log("test deneme reset password");
     const { email } = req.body;
-    const user = await User.findOne({ email });
-
+    console.log("email", email);
+    const user = await User.findOne({ email: email });
     if (!user) {
-      res
-        .status(400)
-        .json({ message: "Kullanıcı bulunamadı veya hesabınız aktif değil." });
+      console.log("user yok");
+      next(
+        new BadRequestError("Kullanıcı bulunamadı veya hesabınız aktif değil.")
+      );
       return;
     }
 
@@ -54,10 +58,19 @@ export const resetPasswordSendEmailController = async (
       isError: false,
     });
   } catch (error) {
-    console.error("Şifre sıfırlama hatası:", error);
-    res
-      .status(500)
-      .json({ message: "Bir hata oluştu, lütfen tekrar deneyiniz." });
+    console.error("=== Şifre Sıfırlama Hatası ===");
+    console.error("Timestamp:", new Date().toISOString());
+    console.error("Error Type:", error?.constructor?.name || "Unknown");
+    console.error("Request Body:", req.body);
+    console.error("User Email:", req.body?.email || "No email provided");
+    console.error("Full Error Object:", JSON.stringify(error, null, 2));
+    console.error("================================");
+
+    res.status(500).json({
+      message: "Bir hata oluştu, lütfen tekrar deneyiniz.",
+      isSuccess: false,
+      isError: true,
+    });
   }
 };
 

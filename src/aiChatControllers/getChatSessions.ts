@@ -9,7 +9,7 @@ export const getChatSessions = async (req: Request, res: Response, next: NextFun
   const { coachType, coachId } = req.query;
 
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }

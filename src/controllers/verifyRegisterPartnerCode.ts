@@ -20,7 +20,7 @@ export const verifyRegisterPartnerCodeController = async (
       token,
       process.env.SECRET_KEY as string
     ) as DecodedToken;
-    console.log(decodedToken, "decoded token");
+    
     const partner = await User.findOne({
       partnerInvitationCode: parseInt(otp),
     });

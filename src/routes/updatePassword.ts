@@ -11,8 +11,8 @@ const router = express.Router();
 
 router.post(
   "/reset-password-verify/:otp/:token/:email/:password",
-  updatePasswordExpressValidator,
-  validateRequest,
+  // updatePasswordExpressValidator,
+  // validateRequest,
   updatePasswordController
 );
 

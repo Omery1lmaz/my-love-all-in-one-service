@@ -72,11 +72,9 @@ export const googleSigninController = async (
           console.error(
             "ERROR: serverAuthCode is required for new user creation"
           );
-          res
-            .status(400)
-            .json({
-              error: "serverAuthCode is required for new user creation",
-            });
+          res.status(400).json({
+            error: "serverAuthCode is required for new user creation",
+          });
           return;
         }
 
@@ -173,7 +171,11 @@ export const googleSigninController = async (
             console.log("User Name:", existingUser.name);
 
             const responseData = {
-              user: existingUser,
+              user: {
+                _id: existingUser._id,
+                email: existingUser.email,
+                name: existingUser.name,
+              },
               googleToken: idToken,
               token: token,
               _id: user._id,

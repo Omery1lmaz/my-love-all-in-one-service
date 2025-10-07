@@ -4,6 +4,8 @@ import { app } from "./app";
 import dotenv from "dotenv";
 import { ChatSocketService } from "./services/chatSocketService";
 
+// Node.js 20+ has built-in fetch, no polyfill needed
+
 dotenv.config();
 import { UserPhotoCreatedEvent } from "./events/listeners/user-photo-created-listener";
 const uri =
@@ -73,7 +75,6 @@ const start = async () => {
       throw error;
     }
     app.all("*", (req, res, next) => {
-      console.log("Auth service");
       next();
     });
     const PORT = process.env.PORT || 4201;

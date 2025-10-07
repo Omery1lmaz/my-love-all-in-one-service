@@ -9,7 +9,7 @@ export const deleteChatSession = async (req: Request, res: Response, next: NextF
   const { sessionId } = req.params;
 
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }

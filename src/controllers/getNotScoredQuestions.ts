@@ -11,7 +11,7 @@ export const getNotScoredQuestionsController = async (
 ) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
@@ -32,11 +32,14 @@ export const getNotScoredQuestionsController = async (
     );
 
     if (!user || !user.partnerId) {
-      next(new NotFoundError())
-      return
+      next(new NotFoundError());
+      return;
     }
     const questions = user.questions?.filter((question) => {
-      return (question.userScore == 0) && ((question?.partnerAnswer?.length || 0) > 0);
+      return (
+        (question?.partnerAnswer?.length || 0) > 0 &&
+        (question?.userScore || 0) === 0
+      );
     });
     res.status(200).json({
       message: "Sorular güncellendi",

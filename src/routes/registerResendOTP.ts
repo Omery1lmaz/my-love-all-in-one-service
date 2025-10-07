@@ -9,8 +9,8 @@ const router = express.Router();
 
 router.post(
   "/resend-otp",
-  registerResendExpressValidator,
-  validateRequest,
+  // registerResendExpressValidator,
+  // validateRequest,
   registerResendOTPController
 );
 

@@ -86,6 +86,7 @@ interface UserAttrs {
   password: string;
   birthDate?: Date;
   profilePic?: string;
+  newPassword?: string;
   partnerId?: mongoose.Schema.Types.ObjectId | null;
   relationshipStartDate?: Date | null;
   status?: "single" | "in_relationship" | "married";
@@ -128,6 +129,10 @@ interface UserAttrs {
   nickname?: string;
   partnerNotes?: string;
   hobbies?: Hobby[];
+  // AdSense related fields
+  lastAdSenseUse?: Date;
+  dailyAdSenseCount?: number;
+  lastAdSenseDate?: Date;
   // This is a list of interests for the user
   interests?: {
     music?: string[];
@@ -262,6 +267,7 @@ interface UserDoc extends mongoose.Document {
   isActive: boolean;
   version: number;
   isDeleted: boolean;
+  newPassword?: string;
   partnerInvitationCode: number;
   partnerSpotifyAccessToken?: string;
   partnerSpotifyRefreshToken?: string;
@@ -278,6 +284,10 @@ interface UserDoc extends mongoose.Document {
   partnerNickname?: string;
   nickname?: string;
   partnerNotes?: string;
+  // AdSense related fields
+  lastAdSenseUse?: Date;
+  dailyAdSenseCount?: number;
+  lastAdSenseDate?: Date;
   interests?: {
     music?: string[];
     movies?: string[];
@@ -477,6 +487,7 @@ const userSchema = new mongoose.Schema<UserDoc>(
     },
     birthDate: { type: Date, required: false },
     profilePic: { type: String, default: "" },
+    newPassword: { type: String, required: false },
     partnerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

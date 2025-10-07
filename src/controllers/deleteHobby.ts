@@ -15,7 +15,7 @@ export const deleteHobbyController = async (
     const { id } = req.params;
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.log("no authHeader");
+      
       res.status(401).json({ message: "Lütfen giriş yapın" });
       return;
     }

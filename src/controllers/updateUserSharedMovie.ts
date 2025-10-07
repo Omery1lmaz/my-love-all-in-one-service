@@ -14,7 +14,7 @@ export const updateSharedUserMovieController = async (
     movie, "movie"
   )
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
@@ -30,7 +30,7 @@ export const updateSharedUserMovieController = async (
     const decodedToken = jwt.verify(token, process.env.SECRET_KEY!) as {
       id: string;
     };
-    console.log(decodedToken, "decoded token");
+    
     const user = await User.findById(
       new mongoose.Types.ObjectId(decodedToken.id)
     );

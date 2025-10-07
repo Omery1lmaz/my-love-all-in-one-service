@@ -10,7 +10,9 @@ export const registerResendOTPController = async (
   res: Response
 ) => {
   try {
+    console.log("registerResendOTPController");
     const { token } = req.query;
+    console.log("token", token);
     const decodedToken = jwt.verify(
       token as string,
       process.env.SECRET_KEY as string

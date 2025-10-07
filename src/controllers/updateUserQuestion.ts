@@ -13,7 +13,7 @@ export const updateUserQuestionController = async (
   const { question } = req.body;
   const { id } = req.params;
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
@@ -29,7 +29,7 @@ export const updateUserQuestionController = async (
     const decodedToken = jwt.verify(token, process.env.SECRET_KEY!) as {
       id: string;
     };
-    console.log(decodedToken, "decoded token");
+    
     const user = await User.findById(
       new mongoose.Types.ObjectId(decodedToken.id)
     );

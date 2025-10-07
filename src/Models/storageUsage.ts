@@ -1,14 +1,14 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 interface StorageUsageAttrs {
-  user: mongoose.Schema.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
   totalStorageUsed: number; // in bytes
   photosCount: number;
   lastUpdated: Date;
 }
 
 interface StorageUsageDoc extends Document {
-  user: mongoose.Schema.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
   totalStorageUsed: number;
   photosCount: number;
   lastUpdated: Date;
@@ -18,7 +18,7 @@ interface StorageUsageDoc extends Document {
 
 interface StorageUsageModel extends Model<StorageUsageDoc> {
   build(attrs: StorageUsageAttrs): StorageUsageDoc;
-  updateUserStorage(userId: mongoose.Schema.Types.ObjectId): Promise<StorageUsageDoc>;
+  updateUserStorage(userId: mongoose.Types.ObjectId): Promise<StorageUsageDoc>;
 }
 
 const storageUsageSchema = new Schema(
@@ -49,7 +49,7 @@ const storageUsageSchema = new Schema(
 );
 
 // Static method to update user storage
-storageUsageSchema.statics.updateUserStorage = async function(userId: mongoose.Schema.Types.ObjectId) {
+storageUsageSchema.statics.updateUserStorage = async function(userId: mongoose.Types.ObjectId) {
   const Photo = mongoose.model("Photo");
   
   // Calculate total storage used by user's photos
@@ -80,6 +80,6 @@ storageUsageSchema.statics.build = (attrs: StorageUsageAttrs) => {
   return new StorageUsage(attrs);
 };
 
-const StorageUsage = mongoose.model("StorageUsage", storageUsageSchema) as StorageUsageModel;
+const StorageUsage = mongoose.model<StorageUsageDoc, StorageUsageModel>("StorageUsage", storageUsageSchema);
 
 export { StorageUsage };

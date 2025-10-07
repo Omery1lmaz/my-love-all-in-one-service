@@ -13,7 +13,7 @@ const updateSharedPlaylistCoverImageController = async (
   const { id } = req.params;
   console.log("test images test")
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
@@ -27,7 +27,7 @@ const updateSharedPlaylistCoverImageController = async (
     const decodedToken = jwt.verify(token, process.env.SECRET_KEY!) as {
       id: string;
     };
-    console.log(decodedToken, "decoded token");
+    
     const user = await User.findById(
       new mongoose.Types.ObjectId(decodedToken.id)
     );

@@ -10,14 +10,12 @@ export const updateChatSessionTitle = async (req: Request, res: Response, next: 
   const { title } = req.body;
 
   if (!authHeader) {
-    console.log("no authHeader");
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
   const token = authHeader.split(" ")[1];
 
   if (!token) {
-    console.log("no token");
     res.status(400).json({ message: "Token bulunamadı" });
     return;
   }

@@ -3,6 +3,7 @@ import { Message, ChatRoom } from "../Models/chat";
 import { User } from "../Models/user";
 import { OnlineStatus } from "../Models/onlineStatus";
 import { expoNotificationService } from "../services/expoNotificationService";
+import { Subscription } from "../Models/subscription";
 import mongoose from "mongoose";
 
 export const sendMessage = async (req: Request, res: Response) => {
@@ -28,6 +29,61 @@ export const sendMessage = async (req: Request, res: Response) => {
       res.status(403).json({ message: "You can only send messages to your partner" });
       return
     }
+
+    // Ensure sender has a subscription (create default if not exists)
+    console.log(`Ensuring subscription exists for message sending - user: ${senderId}`);
+    let userSubscription;
+    try {
+      userSubscription = await Subscription.getDefaultSubscription(
+        new mongoose.Types.ObjectId(senderId)
+      );
+      console.log(`Subscription verified/created for message sending - user: ${senderId}`, {
+        subscriptionId: userSubscription._id,
+        planType: userSubscription.planType,
+        isActive: userSubscription.isActive
+      });
+      
+      // Double check that subscription is active
+      if (!userSubscription.isActive) {
+        console.warn(`Subscription found but inactive for user: ${senderId}, activating...`);
+        userSubscription.isActive = true;
+        await userSubscription.save();
+        console.log(`Subscription activated for user: ${senderId}`);
+      }
+    } catch (error) {
+      console.error(`Error with subscription for message sending - user ${senderId}:`, error);
+      res.status(400).json({ message: "Subscription doğrulanamadı" });
+      return;
+    }
+
+    // Check if user can send more messages (basic check)
+    const existingMessages = await Message.countDocuments({ senderId: senderId });
+    console.log(`Message count check for user: ${senderId}`, {
+      existingMessages,
+      planType: userSubscription.planType
+    });
+
+    // Basic message limit check (can be enhanced based on plan)
+    const maxMessages = userSubscription.planType === 'free' ? 100 : 
+                       userSubscription.planType === 'premium' ? 1000 : 10000;
+    
+    if (existingMessages >= maxMessages) {
+      console.error(`Message limit exceeded for user: ${senderId}`, {
+        existingMessages,
+        maxMessages,
+        planType: userSubscription.planType
+      });
+      res.status(400).json({ 
+        message: `Mesaj limiti aşıldı. Mevcut planınızla ${maxMessages} mesaj gönderebilirsiniz.` 
+      });
+      return;
+    }
+
+    console.log(`Message sending allowed for user: ${senderId}`, {
+      existingMessages,
+      maxMessages,
+      planType: userSubscription.planType
+    });
 
     // Find or create chat room
     let chatRoom = await ChatRoom.findOne({
@@ -59,7 +115,15 @@ export const sendMessage = async (req: Request, res: Response) => {
       chatRoomId: chatRoom!._id
     });
 
+    console.log(`Saving message for user: ${senderId}`);
     await message.save();
+
+    console.log(`Message sent successfully for user: ${senderId}`, {
+      messageId: message._id,
+      messageType: message.messageType,
+      planType: userSubscription.planType,
+      remainingMessages: maxMessages - (existingMessages + 1)
+    });
 
     // Update chat room with last message
     if (chatRoom) {
@@ -103,7 +167,12 @@ export const sendMessage = async (req: Request, res: Response) => {
     res.status(201).json({
       success: true,
       message: "Message sent successfully",
-      data: message
+      data: message,
+      subscriptionInfo: {
+        planType: userSubscription.planType,
+        remainingMessages: maxMessages - (existingMessages + 1),
+        maxMessages: maxMessages
+      }
     });
 
   } catch (error) {

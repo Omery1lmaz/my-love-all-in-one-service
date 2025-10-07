@@ -97,6 +97,10 @@ import { chatRouter } from "./chatRoutes";
 import { aiChatRouter } from "./aiChatRoutes";
 import { updateExpoPushTokenRouter } from "./routes/updateExpoPushToken";
 import { sendTestNotificationRouter } from "./routes/sendTestNotification";
+import { analyzeTextRouter } from "./aiChatRoutes/analyzeText";
+import { analyzeImageRouter } from "./aiChatRoutes/analyzeImage";
+import { analyzeAndGenerateImageRouter } from "./aiChatRoutes/analyzeAndGenerateImage";
+import { levelRoutes } from "./levelRoutes";
 
 const app = express();
 app.set("trust proxy", true);
@@ -259,10 +263,18 @@ app.use('/photo', getStorageInfoRouter);
 // Chat Service Start
 app.use('/chat', chatRouter);
 // Chat Service End
+// Google AI analiz özellikleri
+app.use("/analyze", analyzeTextRouter);
+app.use("/analyze", analyzeImageRouter);
+app.use("/analyze", analyzeAndGenerateImageRouter);
 
 // AI Chat Service Start
 app.use('/ai-chat', aiChatRouter);
 // AI Chat Service End
+
+// LoveSync Gamification Service Start
+app.use(levelRoutes);
+// LoveSync Gamification Service End
 
 // Timeline Service Start
 

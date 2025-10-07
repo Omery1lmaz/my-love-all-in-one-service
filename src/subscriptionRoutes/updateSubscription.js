@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateSubscriptionRouter = void 0;
+const express_1 = require("express");
+const common_1 = require("@heaven-nsoft/common");
+const updateSubscription_1 = require("../subscriptionControllers/updateSubscription");
+const updateSubscription_2 = require("../subscriptionExpressValidators/updateSubscription");
+const router = (0, express_1.Router)();
+exports.updateSubscriptionRouter = router;
+router.put("/", common_1.requireAuth, updateSubscription_2.updateSubscriptionValidator, common_1.validateRequest, updateSubscription_1.updateSubscription);

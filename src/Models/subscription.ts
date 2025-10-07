@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 interface SubscriptionAttrs {
-  user: mongoose.Schema.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
   planType: "free" | "premium" | "premium_plus";
   storageLimit: number; // in bytes
   maxPhotos: number;
@@ -17,7 +17,7 @@ interface SubscriptionAttrs {
 }
 
 interface SubscriptionDoc extends Document {
-  user: mongoose.Schema.Types.ObjectId;
+  user: mongoose.Types.ObjectId;
   planType: "free" | "premium" | "premium_plus";
   storageLimit: number;
   maxPhotos: number;
@@ -38,8 +38,10 @@ interface SubscriptionDoc extends Document {
 
 interface SubscriptionModel extends Model<SubscriptionDoc> {
   build(attrs: SubscriptionAttrs): SubscriptionDoc;
-  getDefaultSubscription(userId: mongoose.Schema.Types.ObjectId): Promise<SubscriptionDoc>;
-  getActiveSubscription(userId: mongoose.Schema.Types.ObjectId): Promise<SubscriptionDoc | null>;
+  getDefaultSubscription(userId: mongoose.Types.ObjectId): Promise<SubscriptionDoc>;
+  getActiveSubscription(userId: mongoose.Types.ObjectId): Promise<SubscriptionDoc | null>;
+  upgradePlan(userId: mongoose.Types.ObjectId, newPlanType: string): Promise<SubscriptionDoc>;
+  downgradeToFree(userId: mongoose.Types.ObjectId): Promise<SubscriptionDoc>;
 }
 
 const subscriptionSchema = new Schema(
@@ -119,7 +121,7 @@ subscriptionSchema.methods.daysUntilExpiry = function() {
 };
 
 // Static method to get or create default subscription
-subscriptionSchema.statics.getDefaultSubscription = async function(userId: mongoose.Schema.Types.ObjectId) {
+subscriptionSchema.statics.getDefaultSubscription = async function(userId: mongoose.Types.ObjectId) {
   let subscription = await this.findOne({ user: userId });
   
   if (!subscription) {
@@ -136,7 +138,7 @@ subscriptionSchema.statics.getDefaultSubscription = async function(userId: mongo
 };
 
 // Static method to get active subscription
-subscriptionSchema.statics.getActiveSubscription = async function(userId: mongoose.Schema.Types.ObjectId) {
+subscriptionSchema.statics.getActiveSubscription = async function(userId: mongoose.Types.ObjectId) {
   const subscription = await this.findOne({ 
     user: userId,
     isActive: true 
@@ -153,9 +155,86 @@ subscriptionSchema.statics.getActiveSubscription = async function(userId: mongoo
 };
 
 subscriptionSchema.statics.build = (attrs: SubscriptionAttrs) => {
-  return new Subscription(attrs);
+  return new (mongoose.model("Subscription", subscriptionSchema))(attrs);
 };
 
-const Subscription = mongoose.model("Subscription", subscriptionSchema) as SubscriptionModel;
+// Static method to upgrade plan
+subscriptionSchema.statics.upgradePlan = async function(userId: mongoose.Types.ObjectId, newPlanType: string) {
+  const subscription = await this.findOne({ user: userId });
+  
+  if (!subscription) {
+    throw new Error("Subscription not found");
+  }
+
+  const planDetails = getPlanDetails(newPlanType);
+  
+  subscription.planType = newPlanType;
+  subscription.storageLimit = planDetails.storageLimit;
+  subscription.maxPhotos = planDetails.maxPhotos;
+  subscription.price = planDetails.price;
+  subscription.currency = planDetails.currency;
+  subscription.isActive = true;
+  
+  // Set end date for paid plans
+  if (newPlanType !== 'free') {
+    const newEndDate = new Date();
+    newEndDate.setMonth(newEndDate.getMonth() + 1);
+    subscription.endDate = newEndDate;
+    subscription.nextPaymentDate = newEndDate;
+  }
+  
+  await subscription.save();
+  return subscription;
+};
+
+// Static method to downgrade to free plan
+subscriptionSchema.statics.downgradeToFree = async function(userId: mongoose.Types.ObjectId) {
+  const subscription = await this.findOne({ user: userId });
+  
+  if (!subscription) {
+    throw new Error("Subscription not found");
+  }
+
+  subscription.planType = "free";
+  subscription.storageLimit = 1024 * 1024 * 100; // 100MB
+  subscription.maxPhotos = 50;
+  subscription.price = 0;
+  subscription.isActive = true;
+  subscription.autoRenew = false;
+  subscription.endDate = undefined;
+  subscription.nextPaymentDate = undefined;
+  subscription.paymentMethod = undefined;
+  
+  await subscription.save();
+  return subscription;
+};
+
+// Helper function to get plan details
+function getPlanDetails(planType: string) {
+  const plans = {
+    free: {
+      storageLimit: 1024 * 1024 * 100, // 100MB
+      maxPhotos: 50,
+      price: 0,
+      currency: "USD"
+    },
+    premium: {
+      storageLimit: 1024 * 1024 * 1024 * 5, // 5GB
+      maxPhotos: 1000,
+      price: 9.99,
+      currency: "USD"
+    },
+    premium_plus: {
+      storageLimit: 1024 * 1024 * 1024 * 50, // 50GB
+      maxPhotos: 10000,
+      price: 19.99,
+      currency: "USD"
+    }
+  };
+
+  return plans[planType as keyof typeof plans] || plans.free;
+}
+
+const Subscription = mongoose.model<SubscriptionDoc, SubscriptionModel>("Subscription", subscriptionSchema);
 
 export { Subscription };

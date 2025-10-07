@@ -16,7 +16,7 @@ export const createHobbyController = async (
     console.log("hobby", hobby);
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.log("no authHeader");
+      
       res.status(401).json({ message: "Lütfen giriş yapın" });
       return;
     }

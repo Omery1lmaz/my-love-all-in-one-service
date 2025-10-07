@@ -8,7 +8,7 @@ export class StorageService {
   /**
    * Update user's storage usage after photo upload/delete
    */
-  static async updateUserStorage(userId: mongoose.Schema.Types.ObjectId): Promise<void> {
+  static async updateUserStorage(userId: mongoose.Types.ObjectId): Promise<void> {
     try {
       await StorageUsage.updateUserStorage(userId);
     } catch (error) {
@@ -21,7 +21,7 @@ export class StorageService {
    * Check if user can upload a photo based on storage limits
    */
   static async canUploadPhoto(
-    userId: mongoose.Schema.Types.ObjectId, 
+    userId: mongoose.Types.ObjectId, 
     fileSize: number
   ): Promise<{ canUpload: boolean; reason?: string; storageInfo?: any }> {
     try {
@@ -81,7 +81,7 @@ export class StorageService {
   /**
    * Get user's storage information
    */
-  static async getUserStorageInfo(userId: mongoose.Schema.Types.ObjectId): Promise<{
+  static async getUserStorageInfo(userId: mongoose.Types.ObjectId): Promise<{
     storageUsage: any;
     subscription: any;
     storagePercentage: number;

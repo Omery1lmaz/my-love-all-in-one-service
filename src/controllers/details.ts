@@ -3,45 +3,159 @@ import { Request, Response } from "express";
 import { User } from "../Models/user";
 import mongoose from "mongoose";
 
-export const detailsController = async (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    res.status(401).json({ message: "Lütfen giriş yapın" });
-    return;
+// Types and Interfaces
+interface JwtPayload {
+  id: string;
+  iat?: number;
+  exp?: number;
+}
+
+interface UserDetailsResponse {
+  _id: string;
+  email: string;
+  name: string;
+  nickName: string;
+  partnerName: string;
+  partnerNickname?: string;
+  partnerCode: number;
+  profilePic: string;
+  partnerProfilePic: string;
+  partnerId: string;
+  spotifyConnected: boolean;
+}
+
+interface AuthError {
+  message: string;
+  statusCode: number;
+}
+
+// Constants
+const AUTH_ERRORS = {
+  NO_AUTH_HEADER: {
+    message: "Lütfen giriş yapın",
+    statusCode: 401
+  },
+  NO_TOKEN: {
+    message: "Token bulunamadı",
+    statusCode: 400
+  },
+  INVALID_TOKEN: {
+    message: "Geçersiz token",
+    statusCode: 401
+  },
+  USER_NOT_FOUND: {
+    message: "Kullanıcı bulunamadı",
+    statusCode: 404
+  },
+  AUTH_FAILED: {
+    message: "Kimlik doğrulama başarısız",
+    statusCode: 401
   }
+} as const;
 
-  const token = authHeader.split(" ")[1];
-
-  if (!token) {
-    res.status(400).json({ message: "Token bulunamadı" });
-    return;
+// Helper Functions
+const extractTokenFromHeader = (authHeader: string): string | null => {
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0] !== "Bearer") {
+    return null;
   }
+  return parts[1];
+};
 
+const verifyJwtToken = (token: string): JwtPayload => {
+  if (!process.env.SECRET_KEY) {
+    throw new Error("SECRET_KEY environment variable is not set");
+  }
+  return jwt.verify(token, process.env.SECRET_KEY) as JwtPayload;
+};
+
+const isValidObjectId = (id: string): boolean => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
+
+const buildUserResponse = (user: any): UserDetailsResponse => {
+  const partner = user.partnerId as any;
+  const sharedProfilePic = user.sharedProfilePic as any;
+
+  return {
+    _id: user._id.toString(),
+    email: user.email,
+    name: user.name || "",
+    partnerCode: user.partnerInvitationCode,
+    nickName: user.nickname || "",
+    partnerName: user.partnerName || "",
+    partnerNickname: user.partnerNickname,
+    profilePic: sharedProfilePic ? sharedProfilePic.url || "" : "",
+    partnerProfilePic: partner?.profilePhoto?.url || "",
+    partnerId: partner?._id?.toString() || "",
+    spotifyConnected: Boolean(user.spotifyRefreshToken)
+  };
+};
+
+const sendErrorResponse = (res: Response, error: AuthError): void => {
+  res.status(error.statusCode).json({ 
+    success: false,
+    message: error.message 
+  });
+};
+
+const sendSuccessResponse = (res: Response, data: UserDetailsResponse): void => {
+  res.status(200).json({
+    success: true,
+    data
+  });
+};
+
+// Main Controller
+export const detailsController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const decodedToken = jwt.verify(token, process.env.SECRET_KEY!) as {
-      id: string;
-    };
-    const user = await User.findById(
-      new mongoose.Types.ObjectId(decodedToken.id)
-    ).populate("partnerId").populate("sharedProfilePic")
-    if (!user) {
-      res.status(404).json({ message: "Kullanıcı bulunamadı" });
+    // 1. Validate Authorization Header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      sendErrorResponse(res, AUTH_ERRORS.NO_AUTH_HEADER);
       return;
     }
-    res.status(200).json({
-      _id: user._id,
-      email: user.email,
-      name: user.name,
-      nickName: user.nickname || "",
-      partnerName: user.partnerName || "",
-      partnerNickname: user.partnerNickname,
-      profilePic: user.sharedProfilePic ? ((user.sharedProfilePic)) : "",
-      partnerProfilePic: user.partnerId ? (((user.partnerId) as any).profilePhoto) : "",
-      partnerId: user.partnerId ? (((user.partnerId) as any)._id) : "",
-      spotifyConnected: user.spotifyRefreshToken ? true : false,
-    });
+
+    // 2. Extract and Validate Token
+    const token = extractTokenFromHeader(authHeader);
+    if (!token) {
+      sendErrorResponse(res, AUTH_ERRORS.NO_TOKEN);
+      return;
+    }
+
+    // 3. Verify JWT Token
+    let decodedToken: JwtPayload;
+    try {
+      decodedToken = verifyJwtToken(token);
+    } catch (jwtError) {
+      sendErrorResponse(res, AUTH_ERRORS.INVALID_TOKEN);
+      return;
+    }
+
+    // 4. Validate User ID
+    if (!isValidObjectId(decodedToken.id)) {
+      sendErrorResponse(res, AUTH_ERRORS.USER_NOT_FOUND);
+      return;
+    }
+
+    // 5. Fetch User from Database
+    const user = await User.findById(decodedToken.id)
+      .populate("partnerId")
+      .populate("sharedProfilePic")
+      .lean();
+
+    if (!user) {
+      sendErrorResponse(res, AUTH_ERRORS.USER_NOT_FOUND);
+      return;
+    }
+
+    // 6. Build and Send Response
+    const userResponse = buildUserResponse(user);
+    sendSuccessResponse(res, userResponse);
+
   } catch (error) {
-    res.status(400).json({ message: "Kimlik doğrulama başarısız" });
+    console.error("Details controller error:", error);
+    sendErrorResponse(res, AUTH_ERRORS.AUTH_FAILED);
   }
 };
 

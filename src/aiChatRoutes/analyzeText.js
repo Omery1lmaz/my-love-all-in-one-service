@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.analyzeTextRouter = void 0;
+const express_1 = require("express");
+const analyzeText_1 = require("../aiChatControllers/analyzeText");
+const analyzeText_2 = require("../aiChatExpressValidators/analyzeText");
+const common_1 = require("@heaven-nsoft/common");
+const router = (0, express_1.Router)();
+exports.analyzeTextRouter = router;
+router.post("/text", analyzeText_2.analyzeTextValidator, common_1.validateRequest, analyzeText_1.analyzeText);

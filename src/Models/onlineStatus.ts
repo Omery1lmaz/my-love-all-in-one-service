@@ -46,7 +46,6 @@ const onlineStatusSchema = new mongoose.Schema<OnlineStatusDoc>(
 );
 
 // Indexes
-onlineStatusSchema.index({ userId: 1 });
 onlineStatusSchema.index({ isOnline: 1 });
 
 // Static methods

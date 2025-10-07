@@ -41,7 +41,10 @@ export const updateUserPhotoMoment = async (
 
     const photo = await Photo.findOne({
       _id: req.params.photoId,
-      user: decodedToken.id || decodedToken.partnerId,
+      $or: [
+        { user: decodedToken.id },
+        { user: decodedToken.partnerId }
+      ]
     });
     console.log("updateUserPhotoMoment photo", photo);
     if (!photo) {
@@ -49,9 +52,21 @@ export const updateUserPhotoMoment = async (
       next(new NotFoundError());
       return;
     }
-    if (photo.user.toString() == decodedToken.id) {
+    
+    // Initialize moment object if it doesn't exist
+    if (!photo.moment) {
+      photo.moment = { me: { description: "" }, partner: { description: "" } };
+    }
+    if (!photo.moment.me) {
+      photo.moment.me = { description: "" };
+    }
+    if (!photo.moment.partner) {
+      photo.moment.partner = { description: "" };
+    }
+    
+    if (photo.user.toString() === decodedToken.id) {
       photo.moment.me.description = moment;
-    } else if (photo.user.toString() == decodedToken.partnerId) {
+    } else if (photo.user.toString() === decodedToken.partnerId) {
       photo.moment.partner.description = moment;
     } else {
       next(new NotFoundError());

@@ -8,6 +8,8 @@ import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { natsWrapper } from "../nats-wrapper";
 import { Album } from "../Models/album";
+import { Subscription } from "../Models/subscription";
+import { StorageService } from "../services/storageService";
 // import { AlbumCreatedEventPublisher } from "../events/publishers/album-created-publisher";
 
 export const createAlbum = async (
@@ -18,7 +20,7 @@ export const createAlbum = async (
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.log("authHeader", authHeader);
+      
       next(new NotAuthorizedError());
       return;
     }
@@ -59,6 +61,57 @@ export const createAlbum = async (
       throw new BadRequestError("Album name is required");
     }
 
+    // Ensure user has a subscription (create default if not exists)
+    console.log(`Ensuring subscription exists for album creation - user: ${decodedToken.id}`);
+    let userSubscription;
+    try {
+      userSubscription = await Subscription.getDefaultSubscription(
+        new mongoose.Types.ObjectId(decodedToken.id)
+      );
+      console.log(`Subscription verified/created for album creation - user: ${decodedToken.id}`, {
+        subscriptionId: userSubscription._id,
+        planType: userSubscription.planType,
+        isActive: userSubscription.isActive
+      });
+      
+      // Double check that subscription is active
+      if (!userSubscription.isActive) {
+        console.warn(`Subscription found but inactive for user: ${decodedToken.id}, activating...`);
+        userSubscription.isActive = true;
+        await userSubscription.save();
+        console.log(`Subscription activated for user: ${decodedToken.id}`);
+      }
+    } catch (error) {
+      console.error(`Error with subscription for album creation - user ${decodedToken.id}:`, error);
+      return next(new BadRequestError("Failed to create or verify subscription"));
+    }
+
+    // Check if user can create more albums (basic check)
+    const existingAlbums = await Album.countDocuments({ user: decodedToken.id });
+    console.log(`Album count check for user: ${decodedToken.id}`, {
+      existingAlbums,
+      planType: userSubscription.planType
+    });
+
+    // Basic album limit check (can be enhanced based on plan)
+    const maxAlbums = userSubscription.planType === 'free' ? 5 : 
+                     userSubscription.planType === 'premium' ? 50 : 200;
+    
+    if (existingAlbums >= maxAlbums) {
+      console.error(`Album limit exceeded for user: ${decodedToken.id}`, {
+        existingAlbums,
+        maxAlbums,
+        planType: userSubscription.planType
+      });
+      return next(new BadRequestError(`Album limit exceeded. You can create up to ${maxAlbums} albums with your current plan.`));
+    }
+
+    console.log(`Album creation allowed for user: ${decodedToken.id}`, {
+      existingAlbums,
+      maxAlbums,
+      planType: userSubscription.planType
+    });
+
     // Create new album with direct values
     const album = new Album({
       user: decodedToken.id as any,
@@ -77,7 +130,16 @@ export const createAlbum = async (
       collaborators: [],
     });
 
+    console.log(`Saving album for user: ${decodedToken.id}`);
     await album.save();
+    
+    console.log(`Album created successfully for user: ${decodedToken.id}`, {
+      albumId: album._id,
+      albumName: album.name,
+      planType: userSubscription.planType,
+      remainingAlbums: maxAlbums - (existingAlbums + 1)
+    });
+
     // await new AlbumCreatedEventPublisher(natsWrapper.client).publish({
     //   id: (album._id as any).toString(),
     //   version: album.__v,
@@ -94,9 +156,15 @@ export const createAlbum = async (
     //   sizeInMB: album.sizeInMB,
     //   user: album.user,
     // });
+    
     res.status(201).json({
       message: "Album created successfully",
       data: album,
+      subscriptionInfo: {
+        planType: userSubscription.planType,
+        remainingAlbums: maxAlbums - (existingAlbums + 1),
+        maxAlbums: maxAlbums
+      }
     });
   } catch (error) {
     console.error("Error creating album:", error);

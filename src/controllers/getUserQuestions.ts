@@ -12,7 +12,7 @@ export const getUserQuestionsController = async (
   const authHeader = req.headers.authorization;
   const { questions } = req.body;
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }

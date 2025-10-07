@@ -9,8 +9,8 @@ const router = express.Router();
 
 router.post(
   "/reset-password-verify/:otp/:token/:email/:password",
-  googleSigninExpressValidator,
-  validateRequest,
+  // googleSigninExpressValidator,
+  // validateRequest,
   resetPasswordController
 );
 

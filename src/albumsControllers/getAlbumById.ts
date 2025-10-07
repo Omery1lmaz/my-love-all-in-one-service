@@ -19,7 +19,7 @@ export const getAlbumById = async (
     const authHeader = req.headers.authorization;
     const { id } = req.params;
     if (!authHeader) {
-      console.log("authHeader", authHeader);
+      
       next(new NotAuthorizedError());
       return;
     }

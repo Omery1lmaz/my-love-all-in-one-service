@@ -15,7 +15,7 @@ export const answerPartnerQuestionController = async (
   const { answer } = req.body;
   console.log("answer partner question", id, answer)
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }

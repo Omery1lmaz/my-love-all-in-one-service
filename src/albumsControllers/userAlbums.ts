@@ -9,6 +9,7 @@ import {
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import { natsWrapper } from "../nats-wrapper";
+import { Subscription } from "../Models/subscription";
 
 export const userAlbums = async (
   req: Request,
@@ -19,7 +20,7 @@ export const userAlbums = async (
     console.log("test");
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      console.log("authHeader", authHeader);
+      
       next(new NotAuthorizedError());
       return;
     }
@@ -43,6 +44,32 @@ export const userAlbums = async (
       return;
     }
 
+    // Ensure user has a subscription (create default if not exists)
+    console.log(`Ensuring subscription exists for album listing - user: ${decodedToken.id}`);
+    let userSubscription;
+    try {
+      userSubscription = await Subscription.getDefaultSubscription(
+        new mongoose.Types.ObjectId(decodedToken.id)
+      );
+      console.log(`Subscription verified/created for album listing - user: ${decodedToken.id}`, {
+        subscriptionId: userSubscription._id,
+        planType: userSubscription.planType,
+        isActive: userSubscription.isActive
+      });
+      
+      // Double check that subscription is active
+      if (!userSubscription.isActive) {
+        console.warn(`Subscription found but inactive for user: ${decodedToken.id}, activating...`);
+        userSubscription.isActive = true;
+        await userSubscription.save();
+        console.log(`Subscription activated for user: ${decodedToken.id}`);
+      }
+    } catch (error) {
+      console.error(`Error with subscription for album listing - user ${decodedToken.id}:`, error);
+      return next(new BadRequestError("Failed to create or verify subscription"));
+    }
+
+    console.log(`Fetching albums for user: ${decodedToken.id}`);
     const albums = await Album.find({
       $or: [
         { user: decodedToken.id },
@@ -54,9 +81,28 @@ export const userAlbums = async (
     }).populate(
       "photos coverPhoto"
     );
+
+    // Get album count for subscription info
+    const albumCount = await Album.countDocuments({ user: decodedToken.id });
+    const maxAlbums = userSubscription.planType === 'free' ? 5 : 
+                     userSubscription.planType === 'premium' ? 50 : 200;
+
+    console.log(`Albums retrieved successfully for user: ${decodedToken.id}`, {
+      albumCount: albums.length,
+      userAlbumCount: albumCount,
+      planType: userSubscription.planType,
+      maxAlbums: maxAlbums
+    });
+
     res.status(201).json({
-      message: "Album created successfully",
+      message: "Albums retrieved successfully",
       data: albums,
+      subscriptionInfo: {
+        planType: userSubscription.planType,
+        currentAlbums: albumCount,
+        maxAlbums: maxAlbums,
+        remainingAlbums: maxAlbums - albumCount
+      }
     });
   } catch (error) {
     console.error("Error creating album:", error);

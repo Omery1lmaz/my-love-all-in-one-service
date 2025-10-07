@@ -10,7 +10,7 @@ export const getCoachSessions = async (req: Request, res: Response, next: NextFu
   const { coachId } = req.params;
 
   if (!authHeader) {
-    console.log("no authHeader");
+    
     res.status(401).json({ message: "Lütfen giriş yapın" });
     return;
   }
