@@ -7,13 +7,12 @@ const openai = new OpenAI({
   apiKey: "bd5fa4b533b34eb1aa813f286e47e415",
   baseURL: baseURL,
 });
-// Image variation için doğrudan OpenAI API'sini kullan
 const openaiDirect = new OpenAI({ apiKey: "bd5fa4b533b34eb1aa813f286e47e415" });
 
 // Google Gemini AI client
 const genAI = new GoogleGenAI({
   apiKey:
-    process.env.GOOGLE_AI_API_KEY || "AIzaSyBpiBChIKVBeUtcQSvuvVt-Rw2B634P6eM",
+    process.env.GOOGLE_AI_API_KEY || "AIzaSyBh5Q0GBhlObKDsitxQo51dsAgYJmdNLvE",
 });
 
 const systemPrompt = "You are a travel agent. Be descriptive and helpful";
@@ -195,77 +194,6 @@ export async function generateImageVariation({
   }
 }
 
-/**
- * Stable Diffusion API ile görsel oluşturur.
- * @param prompt Görsel açıklaması
- * @param n Kaç görsel istendiği (varsayılan 1)
- * @returns {Promise<{ urls: string[], status: string, error?: string }>}
- */
-export async function generateImageWithStableDiffusion({
-  prompt,
-  n = 1,
-}: {
-  prompt: string;
-  n?: number;
-}): Promise<{ urls: string[]; status: string; error?: string }> {
-  try {
-    console.log("=== Stable Diffusion Image Generation Debug ===");
-    console.log("Prompt:", prompt);
-    console.log("Number of images:", n);
-
-    // Stable Diffusion API endpoint (örnek)
-    const response = await fetch(
-      "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:
-            "Bearer sk-b5bQ9xesDRRsWSUv01fQ1g27DdQX8gmBzpSKD4DBhfKaNrgr", // Buraya gerçek API key gelecek
-        },
-        body: JSON.stringify({
-          text_prompts: [
-            {
-              text: prompt,
-              weight: 1,
-            },
-          ],
-          cfg_scale: 7,
-          height: 1024,
-          width: 1024,
-          samples: n,
-          steps: 30,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Stable Diffusion API error: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log("Stable Diffusion Response:", JSON.stringify(result, null, 2));
-
-    // Response'dan image URL'lerini çıkar
-    const urls =
-      result.artifacts?.map((artifact: any) => artifact.base64) || [];
-
-    console.log("Generated URLs:", urls);
-    console.log("=== End Stable Diffusion Debug ===");
-
-    return { urls, status: "success" };
-  } catch (error: any) {
-    console.log("=== Stable Diffusion Error ===");
-    console.log("Error message:", error?.message);
-    console.log("=== End Stable Diffusion Error Debug ===");
-
-    return {
-      urls: [],
-      status: "error",
-      error: error?.message || "Bilinmeyen hata",
-    };
-  }
-}
 
 /**
  * Google Gemini ile görsel oluşturur (Sadece text response, image generation yok).
@@ -1027,7 +955,7 @@ export async function analyzeAndGenerateImage({
     };
 
     const response = await genAI.models.generateContentStream({
-      model: "gemini-2.0-flash-exp",
+      model: "gemini-2.5-flash-image",
       config,
       contents: [
         {
@@ -1085,125 +1013,3 @@ export async function analyzeAndGenerateImage({
   }
 }
 
-/**
- * Google Gemini AI ile resim analizi yapıp, analiz sonucuna göre Stable Diffusion ile yeni resim çizdirme
- * @param imageUrl Analiz edilecek resmin URL'si
- * @param style Çizim stili
- * @param additionalPrompt Ek prompt (opsiyonel)
- * @returns {Promise<{ analysis: string; generatedImageBase64: string; status: string; error?: string }>}
- */
-export async function analyzeAndGenerateImageWithStableDiffusion({
-  imageUrl,
-  style = "realistic",
-  additionalPrompt = "",
-}: {
-  imageUrl: string;
-  style?: "realistic" | "cartoon" | "anime" | "watercolor" | "oil_painting" | "digital_art";
-  additionalPrompt?: string;
-}): Promise<{ 
-  analysis: string; 
-  generatedImageBase64: string; 
-  status: string; 
-  error?: string 
-}> {
-  try {
-    console.log("=== Analyze and Generate Image with Stable Diffusion Debug ===");
-    console.log("Image URL:", imageUrl);
-    console.log("Style:", style);
-    console.log("Additional Prompt:", additionalPrompt);
-
-    // 1. Adım: Resmi analiz et
-    const analysisPrompt = `Bu resmi detaylı olarak analiz et. Resimde ne görüyorsun? Renkler, kompozisyon, objeler, atmosfer, duygu ve stil hakkında kapsamlı bir açıklama yap. Bu analizi kullanarak benzer bir resim çizilecek.`;
-    
-    const analysisResult = await analyzeImageWithGoogleAI({
-      imageUrl,
-      prompt: analysisPrompt,
-    });
-
-    if (analysisResult.status !== "success") {
-      throw new Error("Resim analizi başarısız: " + analysisResult.error);
-    }
-
-    const analysis = analysisResult.result;
-    console.log("Analysis Result:", analysis);
-
-    // 2. Adım: Analiz sonucuna göre prompt oluştur
-    const stylePrompts = {
-      realistic: "photorealistic, high quality, detailed, professional photography",
-      cartoon: "cartoon style, colorful, fun, animated, Disney-like",
-      anime: "anime style, manga, Japanese animation, vibrant colors",
-      watercolor: "watercolor painting, soft colors, artistic, hand-painted",
-      oil_painting: "oil painting, classical art, brushstrokes, artistic masterpiece",
-      digital_art: "digital art, concept art, fantasy, high resolution, detailed"
-    };
-
-    const stylePrompt = stylePrompts[style] || stylePrompts.realistic;
-    
-    const imageGenerationPrompt = `Create a new image based on this analysis: "${analysis}". 
-    Style: ${stylePrompt}. 
-    ${additionalPrompt ? `Additional requirements: ${additionalPrompt}` : ""}
-    
-    Generate a completely new and unique image that captures the essence and mood of the original but is distinctly different.`;
-
-    console.log("Stable Diffusion Prompt:", imageGenerationPrompt);
-
-    // 3. Adım: Stable Diffusion ile yeni resim oluştur
-    const response = await fetch(
-      "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer sk-b5bQ9xesDRRsWSUv01fQ1g27DdQX8gmBzpSKD4DBhfKaNrgr",
-        },
-        body: JSON.stringify({
-          text_prompts: [
-            {
-              text: imageGenerationPrompt,
-              weight: 1,
-            },
-          ],
-          cfg_scale: 7,
-          height: 1024,
-          width: 1024,
-          samples: 1,
-          steps: 30,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Stable Diffusion API error: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log("Stable Diffusion Response:", JSON.stringify(result, null, 2));
-
-    const generatedImageBase64 = result.artifacts?.[0]?.base64;
-    
-    if (!generatedImageBase64) {
-      throw new Error("Resim oluşturulamadı");
-    }
-
-    console.log("Generated Image Base64 length:", generatedImageBase64.length);
-    console.log("=== End Analyze and Generate Image with Stable Diffusion Debug ===");
-
-    return {
-      analysis,
-      generatedImageBase64,
-      status: "success",
-    };
-
-  } catch (error: any) {
-    console.error("=== Analyze and Generate Image with Stable Diffusion Error ===");
-    console.error("Error:", error);
-    console.error("=== End Error Debug ===");
-
-    return {
-      analysis: "",
-      generatedImageBase64: "",
-      status: "error",
-      error: error?.message || "Bilinmeyen hata",
-    };
-  }
-}
